@@ -90,13 +90,33 @@ hallucinated answers claim by claim.
 
 ### Results
 
-> Fill this in from `results/report.md` after your run.
+Measured with a local stack (`llama3.2:3b`, `nomic-embed-text`) on the full 48,178-record index.
+The LLM-judge comparison (`python -m src.evaluate`) was not run with the small local judge; the
+reliability study below uses objective gold labels instead, so it needs no judge.
 
-| Metric | naive | grounded |
+## Reliability layer: knowing when not to answer
+
+`src/reliability.py` turns retrieval evidence (top-k similarity, neighbour agreement, vote entropy)
+into a calibrated probability that the triage is correct, and escalates to a human below a threshold.
+The LLM call is skipped on escalation. The model is fit on 4,000 leave-one-out knowledge-base queries
+and tested on 200 held-out queries that were never indexed.
+
+| | answer everything | with confidence gate |
 |---|---|---|
-| Relevance rate | | |
-| Hallucination rate | | |
-| Category accuracy | | |
+| Held-out accuracy on answered queries | 81.5% | **92.4%** (78.5% of queries answered) |
+| Free-text tickets only (n=98) | 62.2% correct | 56% answered, 21.8% of those wrong |
+
+- Raw top-1 similarity ranks answers worse than random when the data is pooled (a Simpson's-paradox
+  effect from mixing short templated and long free-text tickets). Neighbour agreement carries most of the signal.
+- On 100 queries, the 3B model's self-reported confidence is near a coin flip at spotting its own
+  errors (AUROC 0.55, 2 distinct values) against 0.86 for the retrieval-based score.
+- Clustering the escalated queries (`results/reliability.md`) surfaces knowledge-gap topics.
+
+Reproduce: `python -m src.reliability`, `python -m src.confidence_study --n 100`,
+then `python -m src.export_demo && python -m src.build_demo` to rebuild the static demo in `docs/`.
+
+**Limits:** 200 held-out queries gives a wide interval (7.6% error, 95% CI 3.9% to 12.0%); half the data is
+templated and trivially easy; the label is neighbour-vote category correctness, not answer wording quality.
 
 ## Configuration (`.env`)
 
@@ -104,6 +124,7 @@ hallucinated answers claim by claim.
 |---|---|---|
 | `CHAT_MODEL` | `gpt-4o-mini` | set `gpt-3.5-turbo` if you want to match that model exactly |
 | `JUDGE_MODEL` | `gpt-4o-mini` | ideally stronger than the chat model |
+| `PROVIDER` | `openai` | set `ollama` for a free local setup (`CHAT_MODEL=llama3.2:3b`, `EMBED_MODEL=nomic-embed-text`) |
 | `EMBED_MODEL` | `text-embedding-3-small` | `local` = offline hashing embedder for tests |
 | `TOP_K` | 5 | retrieved records per query |
 | `MIN_SIMILARITY` | 0.35 | cosine cut-off in the grounded variant |
@@ -117,6 +138,7 @@ src/data.py       download, normalise, de-dup, stratified hold-out split
 src/llm.py        model factories (+ offline embedder)
 src/ingest.py     FAISS index build / load
 src/rag.py        retrieval, prompts, structured output, naive vs grounded
+src/reliability.py calibrated confidence gate, risk-coverage analysis, knowledge gaps
 src/evaluate.py   LLM-judge faithfulness/relevance, classification metrics, report
 api.py            FastAPI: /health /recommend /classify /metrics
 app.py            Streamlit triage UI + evaluation explorer
