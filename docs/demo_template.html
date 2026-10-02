@@ -1,0 +1,464 @@
+<title>RAG Support Insights</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Schibsted+Grotesk:wght@400;500;600;700;800&display=swap">
+<style>
+/* Layout: one calm reading column. Verdict numbers first, then two live instruments
+   (threshold slider, ticket explorer), then findings, then limits. */
+:root {
+  --bg: #f4f6f9;
+  --surface: #ffffff;
+  --ink: #12161c;
+  --ink2: #444d5b;
+  --muted: #6b7686;
+  --line: #dde2ea;
+  --accent: #2347d0;
+  --accent-soft: #e6ecfd;
+  --ok: #0c7a5c;
+  --ok-soft: #dff3ec;
+  --warn: #b45309;
+  --warn-soft: #fbeedd;
+  --bad: #b42318;
+  --font-display: "Schibsted Grotesk", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-body: "Schibsted Grotesk", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e1217; --surface: #161b22; --ink: #e8ebf0; --ink2: #a9b2bf; --muted: #7f8998; --line: #2a313b;
+    --accent: #5f80f7; --accent-soft: #1b2442; --ok: #3cc9a0; --ok-soft: #12302a; --warn: #cc7a1e; --warn-soft: #34250f; --bad: #f2766b;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e1217; --surface: #161b22; --ink: #e8ebf0; --ink2: #a9b2bf; --muted: #7f8998; --line: #2a313b;
+  --accent: #5f80f7; --accent-soft: #1b2442; --ok: #3cc9a0; --ok-soft: #12302a; --warn: #cc7a1e; --warn-soft: #34250f; --bad: #f2766b;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 16px; line-height: 1.55; padding-inline: 16px; padding-block: 0 72px; }
+.wrap { max-width: 980px; margin-inline: auto; }
+h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; margin: 0; letter-spacing: -0.015em; }
+h1 { font-size: clamp(2rem, 5.4vw, 3.4rem); line-height: 1.04; font-weight: 800; }
+h2 { font-size: clamp(1.35rem, 3vw, 1.75rem); line-height: 1.15; font-weight: 700; }
+h3 { font-size: 1.05rem; font-weight: 700; letter-spacing: -0.005em; }
+p { margin: 0; }
+a { color: var(--accent); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+.mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.eyebrow { font-family: var(--font-mono); font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.lede { color: var(--ink2); font-size: 1.1rem; max-width: 62ch; }
+section { padding-block: 56px 0; }
+.sec-head { display: flex; flex-direction: column; gap: 8px; margin-bottom: 22px; }
+.sec-head p { color: var(--ink2); max-width: 66ch; }
+
+/* hero */
+.hero { padding-block: 44px 0; display: flex; flex-direction: column; gap: 20px; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { font-family: var(--font-mono); font-size: 0.74rem; padding: 3px 9px; border: 1px solid var(--line); border-radius: 999px; color: var(--ink2); background: var(--surface); }
+.stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; margin-top: 8px; }
+.stat { background: var(--surface); padding: 18px 18px 16px; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.stat b { font-family: var(--font-display); font-size: clamp(1.6rem, 4vw, 2.3rem); font-weight: 800; letter-spacing: -0.02em; line-height: 1.05; font-variant-numeric: tabular-nums; }
+.stat span { font-size: 0.85rem; color: var(--ink2); }
+.stat.key b { color: var(--accent); }
+@media (max-width: 720px) { .stats { grid-template-columns: repeat(2, 1fr); } }
+
+/* pipeline */
+.pipe-scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+.pipe { min-width: 760px; width: 100%; display: block; }
+.pipe text { font-family: var(--font-body); fill: var(--ink); }
+.pipe .sub { font-family: var(--font-mono); fill: var(--muted); font-size: 11.5px; }
+.pipe .box { fill: var(--surface); stroke: var(--line); stroke-width: 1.5; }
+.pipe .gate { fill: var(--accent-soft); stroke: var(--accent); stroke-width: 1.5; }
+.pipe .ok { fill: var(--ok-soft); stroke: var(--ok); stroke-width: 1.5; }
+.pipe .esc { fill: var(--warn-soft); stroke: var(--warn); stroke-width: 1.5; }
+.pipe .arrow { stroke: var(--muted); stroke-width: 1.5; fill: none; }
+
+/* panels */
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 22px; }
+.controls { display: flex; flex-wrap: wrap; gap: 14px 24px; align-items: center; margin-bottom: 14px; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.seg button { font: inherit; font-size: 0.85rem; padding: 7px 12px; border: 0; background: var(--surface); color: var(--ink2); cursor: pointer; border-right: 1px solid var(--line); }
+.seg button:last-child { border-right: 0; }
+.seg button[aria-pressed="true"] { background: var(--accent); color: #fff; }
+.slider-row { display: flex; align-items: center; gap: 12px; flex: 1 1 280px; min-width: 0; }
+.slider-row label { font-size: 0.85rem; color: var(--ink2); white-space: nowrap; }
+input[type="range"] { flex: 1; min-width: 0; accent-color: var(--accent); height: 28px; }
+.readout { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-block: 6px 16px; }
+.readout div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.readout b { font-size: 1.7rem; font-weight: 800; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; line-height: 1.1; }
+.readout span { font-size: 0.8rem; color: var(--ink2); }
+.readout .good { color: var(--ok); }
+.readout .escl { color: var(--warn); }
+@media (max-width: 560px) { .readout { grid-template-columns: 1fr; } }
+.verdict { color: var(--ink2); font-size: 0.95rem; margin-bottom: 14px; min-height: 3em; }
+.chart { width: 100%; height: auto; display: block; touch-action: none; cursor: crosshair; }
+.chart text { font-family: var(--font-mono); font-size: 11px; fill: var(--muted); }
+.chart .grid { stroke: var(--line); stroke-width: 1; }
+.chart .axis { stroke: var(--muted); stroke-width: 1; }
+.chart .curve { fill: none; stroke: var(--accent); stroke-width: 2.4; stroke-linejoin: round; stroke-linecap: round; }
+.chart .area { fill: var(--accent); opacity: 0.08; }
+.chart .base { stroke: var(--muted); stroke-width: 1.5; stroke-dasharray: 5 4; }
+.chart .lab { fill: var(--ink2); font-family: var(--font-body); font-size: 12px; }
+.chart .labacc { fill: var(--accent); font-family: var(--font-body); font-size: 12px; font-weight: 600; }
+.chart .cross { stroke: var(--accent); stroke-width: 1; stroke-dasharray: 3 3; }
+.chart .dot { fill: var(--accent); stroke: var(--surface); stroke-width: 2.5; }
+.hint { font-size: 0.8rem; color: var(--muted); margin-top: 8px; }
+
+/* explorer */
+.explore { display: grid; grid-template-columns: 290px minmax(0, 1fr); gap: 22px; align-items: start; }
+@media (max-width: 820px) { .explore { grid-template-columns: 1fr; } }
+.qlist { display: flex; flex-direction: column; gap: 6px; }
+.qlist h3 { font-size: 0.78rem; font-family: var(--font-mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); font-weight: 500; margin-top: 6px; }
+.qbtn { text-align: left; font: inherit; font-size: 0.86rem; line-height: 1.35; padding: 9px 11px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 8px; cursor: pointer; display: flex; gap: 9px; align-items: flex-start; }
+.qbtn:hover { border-color: var(--muted); }
+.qbtn[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); }
+.qbtn i { flex: none; width: 8px; height: 8px; border-radius: 50%; margin-top: 6px; background: var(--ok); }
+.qbtn i.esc { background: var(--warn); }
+.qbtn span { min-width: 0; overflow-wrap: anywhere; }
+select { font: inherit; font-size: 0.85rem; width: 100%; padding: 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink); }
+.detail { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.qbox { border-left: 3px solid var(--line); padding: 2px 0 2px 14px; color: var(--ink); overflow-wrap: anywhere; }
+.qbox small { display: block; margin-bottom: 4px; }
+.meter { display: flex; flex-direction: column; gap: 8px; }
+.meter-top { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px 14px; align-items: baseline; }
+.pill { font-size: 0.8rem; font-weight: 600; padding: 3px 10px; border-radius: 999px; }
+.pill.ok { background: var(--ok-soft); color: var(--ok); }
+.pill.esc { background: var(--warn-soft); color: var(--warn); }
+.bar { position: relative; height: 12px; background: var(--line); border-radius: 6px; }
+.bar > i { position: absolute; inset: 0 auto 0 0; border-radius: 6px; display: block; }
+.bar > b { position: absolute; top: -5px; bottom: -5px; width: 2px; background: var(--ink); }
+.bar-lab { display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--muted); }
+.nn { display: grid; gap: 10px; }
+.nn-item { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; font-size: 0.88rem; min-width: 0; }
+.nn-item header { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: center; margin-bottom: 4px; }
+.nn-item .cat { font-family: var(--font-mono); font-size: 0.72rem; background: var(--bg); padding: 2px 7px; border-radius: 4px; color: var(--ink2); }
+.nn-item p { color: var(--ink2); overflow-wrap: anywhere; }
+.nn-item p + p { margin-top: 3px; }
+.out { border: 1px solid var(--line); border-radius: 8px; padding: 14px; background: var(--bg); overflow-wrap: anywhere; }
+.out h3 { margin-bottom: 6px; }
+.out ul { margin: 8px 0 0; padding-left: 18px; color: var(--ink2); font-size: 0.92rem; }
+.truth { font-size: 0.88rem; color: var(--ink2); }
+.truth .y { color: var(--ok); font-weight: 600; }
+.truth .n { color: var(--bad); font-weight: 600; }
+
+/* findings */
+.grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+@media (max-width: 820px) { .grid2 { grid-template-columns: 1fr; } }
+.rows { display: flex; flex-direction: column; gap: 10px; margin-top: 14px; }
+.row { display: grid; grid-template-columns: 150px 1fr 58px; gap: 10px; align-items: center; font-size: 0.86rem; }
+.row .t { height: 14px; background: var(--line); border-radius: 3px; position: relative; }
+.row .t i { position: absolute; inset: 0 auto 0 0; border-radius: 3px; background: var(--muted); display: block; }
+.row.us .t i { background: var(--accent); }
+.row.us { font-weight: 600; }
+.row b { font-family: var(--font-mono); font-weight: 500; text-align: right; }
+@media (max-width: 480px) { .row { grid-template-columns: 112px 1fr 50px; font-size: 0.8rem; } }
+.cap { font-size: 0.86rem; color: var(--ink2); margin-top: 12px; }
+table { border-collapse: collapse; width: 100%; font-size: 0.88rem; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); }
+th { font-family: var(--font-mono); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 500; }
+td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; font-family: var(--font-mono); }
+.tbl { overflow-x: auto; }
+.gaps { display: flex; flex-direction: column; }
+.gap { border-top: 1px solid var(--line); padding-block: 14px; display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 6px 22px; }
+.gap:first-child { border-top: 0; }
+@media (max-width: 720px) { .gap { grid-template-columns: 1fr; } }
+.gap h3 { font-size: 0.98rem; }
+.gap .m { font-size: 0.8rem; color: var(--muted); margin-top: 2px; }
+.gap blockquote { margin: 0; color: var(--ink2); font-size: 0.88rem; overflow-wrap: anywhere; }
+.gap blockquote + blockquote { margin-top: 6px; }
+.limits { display: grid; gap: 14px; }
+.limits li { color: var(--ink2); }
+.limits { list-style: none; padding: 0; margin: 0; }
+.limits b { color: var(--ink); }
+pre { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px; overflow-x: auto; font-family: var(--font-mono); font-size: 0.82rem; line-height: 1.6; margin: 0; }
+footer { margin-top: 64px; padding-top: 18px; border-top: 1px solid var(--line); font-size: 0.85rem; color: var(--muted); display: flex; flex-wrap: wrap; gap: 6px 18px; justify-content: space-between; }
+@media (prefers-reduced-motion: no-preference) { .bar > i { transition: width .25s ease; } }
+</style>
+
+<div class="wrap">
+
+<header class="hero">
+  <div class="eyebrow">AI / ML engineering project · retrieval-augmented generation · evaluation</div>
+  <h1>A support-ticket triage system that knows when not to answer.</h1>
+  <p class="lede">It searches 48,178 past tickets, drafts a next-best-action with a local LLM, and escalates to a human whenever the retrieved evidence is too weak to trust. This page is built from its real results on tickets it never saw.</p>
+  <div class="chips" id="chips"></div>
+  <div class="stats" id="stats"></div>
+</header>
+
+<section id="how">
+  <div class="sec-head">
+    <h2>How a message flows through it</h2>
+    <p>The confidence gate is the new part. It reads the retrieved tickets, predicts the chance that the triage is correct, and decides before the LLM is called.</p>
+  </div>
+  <div class="pipe-scroll">
+    <svg class="pipe" viewBox="0 0 860 190" role="img" aria-label="Pipeline: customer message, embed and search 48K tickets, confidence gate, then either LLM answer or human escalation">
+      <defs><marker id="ah" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="var(--muted)"/></marker></defs>
+      <rect class="box" x="14" y="62" width="150" height="66" rx="8"/>
+      <text x="89" y="90" text-anchor="middle" font-size="14" font-weight="600">Customer message</text>
+      <text class="sub" x="89" y="110" text-anchor="middle">"charged twice…"</text>
+      <path class="arrow" d="M164 95 H208" marker-end="url(#ah)"/>
+      <rect class="box" x="210" y="62" width="190" height="66" rx="8"/>
+      <text x="305" y="90" text-anchor="middle" font-size="14" font-weight="600">Embed + search</text>
+      <text class="sub" x="305" y="110" text-anchor="middle">FAISS · top 5 of 48,178</text>
+      <path class="arrow" d="M400 95 H444" marker-end="url(#ah)"/>
+      <rect class="gate" x="446" y="52" width="190" height="86" rx="8"/>
+      <text x="541" y="82" text-anchor="middle" font-size="14" font-weight="700">Confidence gate</text>
+      <text class="sub" x="541" y="102" text-anchor="middle">P(triage correct)</text>
+      <text class="sub" x="541" y="120" text-anchor="middle">vs threshold τ</text>
+      <path class="arrow" d="M636 78 C 660 78, 664 40, 690 40" marker-end="url(#ah)"/>
+      <path class="arrow" d="M636 112 C 660 112, 664 150, 690 150" marker-end="url(#ah)"/>
+      <rect class="ok" x="692" y="14" width="156" height="56" rx="8"/>
+      <text x="770" y="38" text-anchor="middle" font-size="14" font-weight="600">Answer</text>
+      <text class="sub" x="770" y="56" text-anchor="middle">LLM + cited tickets</text>
+      <rect class="esc" x="692" y="122" width="156" height="56" rx="8"/>
+      <text x="770" y="146" text-anchor="middle" font-size="14" font-weight="600">Escalate</text>
+      <text class="sub" x="770" y="164" text-anchor="middle">human, LLM skipped</text>
+      <text class="sub" x="664" y="30" text-anchor="middle" fill="var(--ok)" style="fill:var(--ok)">≥ τ</text>
+      <text class="sub" x="664" y="176" text-anchor="middle" style="fill:var(--warn)">&lt; τ</text>
+    </svg>
+  </div>
+</section>
+
+<section id="threshold">
+  <div class="sec-head">
+    <h2>Drag the threshold. See the trade-off.</h2>
+    <p>Every point on the curve is a threshold. Answering more queries means more wrong answers. The gate picks a point on this curve instead of answering everything.</p>
+  </div>
+  <div class="panel">
+    <div class="controls">
+      <div class="seg" role="group" aria-label="Population" id="popSeg"></div>
+      <div class="slider-row"><label for="tau">Threshold τ <b class="mono" id="tauVal"></b></label><input id="tau" type="range" min="0" max="1" step="0.005"></div>
+    </div>
+    <div class="readout" aria-live="polite">
+      <div><b class="good" id="rCov"></b><span>answered automatically</span></div>
+      <div><b id="rRisk"></b><span>of those answers are wrong</span></div>
+      <div><b class="escl" id="rEsc"></b><span>escalated to a human</span></div>
+    </div>
+    <p class="verdict" id="verdict"></p>
+    <svg class="chart" id="rc" viewBox="0 0 700 330" role="img" aria-label="Risk-coverage curve: error rate on answered queries as a function of coverage"></svg>
+    <p class="hint">Click or drag on the chart to move the threshold. <button id="reset" class="qbtn" style="display:inline-flex;padding:3px 9px;font-size:.78rem">Reset to production τ</button></p>
+  </div>
+</section>
+
+<section id="try">
+  <div class="sec-head">
+    <h2>Try it on real tickets it has never seen</h2>
+    <p>These are held-out customer messages, excluded from the index. Pick one to see the retrieved tickets, the gate's decision, and whether it matched the true label. Green dot means answered, amber means escalated.</p>
+  </div>
+  <div class="panel">
+    <div class="explore">
+      <div class="qlist" id="qlist"></div>
+      <div class="detail" id="detail"></div>
+    </div>
+  </div>
+</section>
+
+<section id="findings">
+  <div class="sec-head">
+    <h2>What I found</h2>
+    <p>All numbers are measured against gold category labels, so no LLM judge is involved. The confidence model was fit on leave-one-out queries from the knowledge base and tested on the held-out split.</p>
+  </div>
+  <div class="grid2">
+    <div class="panel">
+      <h3>Raw similarity is a poor trust signal</h3>
+      <p class="cap" style="margin-top:6px">Area under the risk-coverage curve on held-out queries. Lower is better.</p>
+      <div class="rows" id="aurcRows"></div>
+      <p class="cap">Raw top-1 similarity is worse than random. Neighbour agreement does nearly all of the work, and the calibrated model adds a small edge and a usable probability.</p>
+    </div>
+    <div class="panel">
+      <h3>The data hides two different problems</h3>
+      <div class="tbl"><table id="srcTbl"></table></div>
+      <p class="cap" id="srcCap"></p>
+    </div>
+  </div>
+  <div class="panel" id="studyPanel" style="margin-top:18px" hidden></div>
+</section>
+
+<section id="gaps">
+  <div class="sec-head">
+    <h2>Where the knowledge base runs out</h2>
+    <p>Clustering the queries the gate escalates shows which topics the system cannot handle. Low category purity means the same topic is filed under many categories, which points to a taxonomy problem as well as missing knowledge.</p>
+  </div>
+  <div class="panel"><div class="gaps" id="gapList"></div></div>
+</section>
+
+<section id="limits">
+  <div class="sec-head"><h2>Limits I would name before you ask</h2></div>
+  <ul class="limits" id="limitList"></ul>
+</section>
+
+<section id="run">
+  <div class="sec-head"><h2>Run it yourself</h2><p>Everything runs locally with no API key and no cost.</p></div>
+<pre>python -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt
+brew install ollama &amp;&amp; ollama pull llama3.2:3b &amp;&amp; ollama pull nomic-embed-text
+python -m src.data --source both     # download and split the datasets
+python -m src.ingest                 # embed 48K tickets into FAISS
+python -m src.reliability            # fit the confidence gate, write the report
+streamlit run app.py                 # live dashboard</pre>
+</section>
+
+<footer>
+  <span id="foot"></span>
+  <span id="links"></span>
+</footer>
+</div>
+
+<script>
+const GITHUB_URL = ""; // set to your repository URL to show a code link
+const D = __DATA__;
+const $ = (s) => document.querySelector(s);
+const pct = (x, d = 1) => (x * 100).toFixed(d) + "%";
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const M = D.meta, TAU0 = M.tau;
+const H = D.holdout;
+
+/* ---------- hero ---------- */
+const acc = 1 - M.at_threshold.holdout.risk;
+$("#chips").innerHTML = ["Python", "FAISS", "LangChain", "Ollama · llama3.2 3B", "nomic-embed-text", "FastAPI", "Streamlit", "scikit-learn"]
+  .map((t) => `<span class="chip">${t}</span>`).join("");
+$("#stats").innerHTML = [
+  [pct(M.baseline_accuracy.holdout), "correct if it answers everything", ""],
+  [pct(acc), "correct on what it chooses to answer", "key"],
+  [pct(M.at_threshold.holdout.coverage, 0), "of queries still answered automatically", ""],
+  [M.index_size.toLocaleString(), "past tickets searched · $0 to run", ""],
+].map(([b, s, k]) => `<div class="stat ${k}"><b>${b}</b><span>${s}</span></div>`).join("");
+
+/* ---------- risk-coverage ---------- */
+const pops = {
+  hold: { label: "Held-out · all", conf: H.map((r) => r.conf), ok: H.map((r) => +r.ok) },
+  tick: { label: "Held-out · free-text tickets", conf: H.filter((r) => r.src === "tickets").map((r) => r.conf), ok: H.filter((r) => r.src === "tickets").map((r) => +r.ok) },
+  cal: { label: "Calibration · 4,000 queries", conf: D.cal.conf, ok: D.cal.ok },
+};
+let pop = "hold", tau = TAU0;
+const W = 700, Ht = 330, L = 50, R = 22, T = 20, B = 44;
+
+function curve(p) {
+  const idx = p.conf.map((_, i) => i).sort((a, b) => p.conf[b] - p.conf[a]);
+  let c = 0; const pts = [];
+  idx.forEach((i, k) => { c += p.ok[i]; pts.push({ cov: (k + 1) / idx.length, risk: 1 - c / (k + 1), conf: p.conf[i] }); });
+  return pts;
+}
+function at(p, t) {
+  let n = 0, c = 0;
+  p.conf.forEach((v, i) => { if (v >= t) { n++; c += p.ok[i]; } });
+  return { cov: n / p.conf.length, risk: n ? 1 - c / n : 0, n };
+}
+function drawRC() {
+  const p = pops[pop], pts = curve(p), base = 1 - p.ok.reduce((a, b) => a + b, 0) / p.ok.length;
+  const ymax = Math.max(0.1, Math.ceil(base * 1.35 * 20) / 20);
+  const X = (c) => L + c * (W - L - R), Y = (r) => Ht - B - (Math.min(r, ymax) / ymax) * (Ht - B - T);
+  const step = Math.max(1, Math.floor(pts.length / 220));
+  const draw = pts.filter((_, i) => i % step === 0 || i === pts.length - 1).filter((q) => q.cov >= 0.03);
+  const line = draw.map((q, i) => `${i ? "L" : "M"}${X(q.cov).toFixed(1)} ${Y(q.risk).toFixed(1)}`).join(" ");
+  const area = `${line} L${X(draw[draw.length - 1].cov)} ${Y(0)} L${X(draw[0].cov)} ${Y(0)} Z`;
+  const cur = at(p, tau);
+  let g = "";
+  for (let v = 0; v <= ymax + 1e-9; v += ymax <= 0.15 ? 0.05 : 0.1) g += `<line class="grid" x1="${L}" x2="${W - R}" y1="${Y(v)}" y2="${Y(v)}"/><text x="${L - 8}" y="${Y(v) + 4}" text-anchor="end">${Math.round(v * 100)}%</text>`;
+  for (let v = 0; v <= 1.001; v += 0.25) g += `<text x="${X(v)}" y="${Ht - B + 18}" text-anchor="middle">${Math.round(v * 100)}%</text>`;
+  const cx = X(cur.cov), cy = Y(cur.risk);
+  const right = cx > W - 200;
+  $("#rc").innerHTML = `
+    <defs><clipPath id="clip"><rect x="${L}" y="${T - 4}" width="${W - L - R}" height="${Ht - B - T + 4}"/></clipPath></defs>
+    ${g}
+    <line class="axis" x1="${L}" x2="${W - R}" y1="${Y(0)}" y2="${Y(0)}"/>
+    <text x="${(L + W - R) / 2}" y="${Ht - 6}" text-anchor="middle">coverage: share of queries answered automatically</text>
+    <text transform="translate(14 ${(T + Ht - B) / 2}) rotate(-90)" text-anchor="middle">wrong among answered</text>
+    <line class="base" x1="${L}" x2="${W - R}" y1="${Y(base)}" y2="${Y(base)}"/>
+    <text class="lab" x="${W - R - 4}" y="${Y(base) - 7}" text-anchor="end">answer everything · ${pct(base)} wrong</text>
+    <g clip-path="url(#clip)"><path class="area" d="${area}"/><path class="curve" d="${line}"/></g>
+    <line class="cross" x1="${cx}" x2="${cx}" y1="${cy}" y2="${Y(0)}"/>
+    <circle class="dot" cx="${cx}" cy="${cy}" r="6"/>
+    <text class="labacc" x="${right ? cx - 12 : cx + 12}" y="${Math.min(Ht - B - 10, cy - 12)}" text-anchor="${right ? "end" : "start"}">with gate · ${pct(cur.risk)} wrong at ${pct(cur.cov, 0)} coverage</text>`;
+  $("#tauVal").textContent = tau.toFixed(2);
+  $("#rCov").textContent = pct(cur.cov);
+  $("#rRisk").textContent = pct(cur.risk);
+  $("#rEsc").textContent = pct(1 - cur.cov);
+  const asIs = pct(base);
+  $("#verdict").innerHTML = tau <= 0.001
+    ? `With the gate switched off, every query is answered and <b>${asIs}</b> of them are wrong.`
+    : `At τ = ${tau.toFixed(2)} the system answers <b>${pct(cur.cov, 0)}</b> of these ${p.conf.length} queries and <b>${pct(cur.risk)}</b> of its answers are wrong. Without the gate, <b>${asIs}</b> would be.${Math.abs(tau - TAU0) < 0.006 ? " This is the threshold the deployed system uses (chosen for at most 10% error on the calibration set)." : ""}`;
+  document.querySelectorAll("#popSeg button").forEach((b) => b.setAttribute("aria-pressed", b.dataset.k === pop));
+}
+$("#popSeg").innerHTML = Object.entries(pops).map(([k, v]) => `<button data-k="${k}" aria-pressed="false">${v.label}</button>`).join("");
+$("#popSeg").addEventListener("click", (e) => { const k = e.target.dataset.k; if (k) { pop = k; drawRC(); } });
+$("#tau").value = tau;
+$("#tau").addEventListener("input", (e) => { tau = +e.target.value; drawRC(); });
+$("#reset").addEventListener("click", () => { tau = TAU0; $("#tau").value = tau; drawRC(); });
+function fromPointer(e) {
+  const r = $("#rc").getBoundingClientRect();
+  const cov = Math.min(1, Math.max(0.03, ((e.clientX - r.left) / r.width * W - L) / (W - L - R)));
+  const pts = curve(pops[pop]); const q = pts[Math.min(pts.length - 1, Math.max(0, Math.round(cov * pts.length) - 1))];
+  tau = Math.round(q.conf * 200) / 200; $("#tau").value = tau; drawRC();
+}
+let dragging = false;
+$("#rc").addEventListener("pointerdown", (e) => { dragging = true; fromPointer(e); });
+window.addEventListener("pointerup", () => (dragging = false));
+$("#rc").addEventListener("pointermove", (e) => { if (dragging) fromPointer(e); });
+
+/* ---------- ticket explorer ---------- */
+const byId = Object.fromEntries(H.map((r) => [r.id, r]));
+const showIds = Object.keys(D.showcase);
+let sel = showIds[0];
+function qbtn(r) { return `<button class="qbtn" data-id="${r.id}" aria-pressed="false"><i class="${r.abstain ? "esc" : ""}"></i><span>${esc(r.q.slice(0, 92))}${r.q.length > 92 ? "…" : ""}</span></button>`; }
+$("#qlist").innerHTML = `<h3>Featured examples</h3>${showIds.map((id) => qbtn(byId[id])).join("")}
+  <h3>Browse all ${H.length}</h3>
+  <label class="eyebrow" for="allSel" style="display:none">All held-out queries</label>
+  <select id="allSel"><option value="">Choose a ticket…</option>${H.map((r) => `<option value="${r.id}">${r.abstain ? "◐ escalated" : "● answered"} · ${esc(r.q.slice(0, 70))}</option>`).join("")}</select>`;
+$("#qlist").addEventListener("click", (e) => { const b = e.target.closest(".qbtn"); if (b) { sel = b.dataset.id; $("#allSel").value = ""; showQ(); } });
+$("#allSel").addEventListener("change", (e) => { if (e.target.value) { sel = e.target.value; showQ(); } });
+function showQ() {
+  const r = byId[sel], s = D.showcase[sel];
+  document.querySelectorAll("#qlist .qbtn").forEach((b) => b.setAttribute("aria-pressed", b.dataset.id === sel));
+  const state = r.abstain ? "esc" : "ok";
+  let out;
+  if (s && s.abstained) out = `<div class="out"><h3>Escalated to a human</h3><p>The retrieved tickets do not agree on how to handle this, so the system skipped the LLM call. Suggested neighbour-vote category: <b>${esc(s.category)}</b>.</p></div>`;
+  else if (s) out = `<div class="out"><div class="eyebrow">LLM output (llama3.2 3B, grounded prompt)</div><h3>${esc(s.category)} · ${esc(s.intent)}</h3><p>${esc(s.action)}</p><ul>${s.steps.map((x) => `<li>${esc(x)}</li>`).join("")}</ul></div>`;
+  else out = `<div class="out"><h3>${r.abstain ? "Escalated to a human" : "Answered automatically"}</h3><p>Neighbour-vote category: <b>${esc(r.pred)}</b>. The LLM-written action is precomputed only for the featured examples to keep this page static.</p></div>`;
+  $("#detail").innerHTML = `
+    <div class="qbox"><small class="eyebrow">Customer message · ${r.src === "tickets" ? "free-text ticket" : "short templated message"}</small>${esc(r.q)}</div>
+    <div class="meter">
+      <div class="meter-top"><span><b class="mono">${pct(r.conf, 0)}</b> calibrated chance the triage is correct</span><span class="pill ${state}">${r.abstain ? "Escalated to a human" : "Answered automatically"}</span></div>
+      <div class="bar" role="img" aria-label="confidence ${pct(r.conf, 0)}, threshold ${pct(TAU0, 0)}"><i style="width:${r.conf * 100}%;background:var(--${state === "ok" ? "ok" : "warn"})"></i><b style="left:${TAU0 * 100}%"></b></div>
+      <div class="bar-lab"><span>0%</span><span>threshold ${pct(TAU0, 0)}</span><span>100%</span></div>
+    </div>
+    <div class="truth">True label: <b>${esc(r.gold)}</b> · neighbour vote: <b>${esc(r.pred)}</b> · <span class="${r.ok ? "y" : "n"}">${r.ok ? "match" : "mismatch"}</span>${r.abstain && !r.ok ? " (the gate correctly held back a wrong triage)" : ""}${!r.abstain && !r.ok ? " (a confident miss, the gate can't catch everything)" : ""}</div>
+    ${out}
+    <div><div class="eyebrow" style="margin-bottom:8px">Three nearest past tickets</div><div class="nn">${r.nn.map((n) => `<div class="nn-item"><header><span class="cat">${esc(n.cat)}</span><span class="mono" style="font-size:.78rem;color:var(--muted)">similarity ${n.sim.toFixed(2)}</span></header><p><b>Customer:</b> ${esc(n.q)}</p><p><b>Resolution:</b> ${esc(n.res)}</p></div>`).join("")}</div></div>`;
+}
+
+/* ---------- findings ---------- */
+const order = [["calibrated_model", "Calibrated model", true], ["vote_share", "Neighbour vote share", false], ["random", "Random ordering", false], ["raw_top1", "Raw top-1 similarity", false]];
+const aurcMax = Math.max(...order.map(([k]) => M.aurc[k].holdout));
+$("#aurcRows").innerHTML = order.map(([k, n, us]) => `<div class="row ${us ? "us" : ""}"><span>${n}</span><span class="t"><i style="width:${(M.aurc[k].holdout / aurcMax) * 100}%"></i></span><b>${M.aurc[k].holdout.toFixed(3)}</b></div>`).join("");
+const bs = M.by_source.holdout;
+$("#srcTbl").innerHTML = `<tr><th>Source</th><th class="n">n</th><th class="n">Answer all</th><th class="n">Coverage</th><th class="n">Wrong</th></tr>` +
+  Object.entries(bs).map(([k, v]) => `<tr><td>${k === "bitext" ? "Short templated" : "Free-text tickets"}</td><td class="n">${v.n}</td><td class="n">${pct(v.baseline_accuracy, 0)} correct</td><td class="n">${pct(v.coverage, 0)}</td><td class="n">${v.error_on_answered == null ? "–" : pct(v.error_on_answered)}</td></tr>`).join("");
+$("#srcCap").textContent = `Templated messages are trivially easy, so they inflate the headline. The honest number is the free-text row: the gate answers ${pct(bs.tickets.coverage, 0)} of those tickets and ${pct(bs.tickets.error_on_answered)} of its answers are wrong, against ${pct(1 - bs.tickets.baseline_accuracy)} without it. Pooled, raw similarity even ranks backwards, because short easy messages score lower similarity than long hard ones.`;
+
+if (D.study && D.study.signals) {
+  const s = D.study.signals, a = s.llm_verbalised_confidence, b = s.retrieval_calibrated_confidence;
+  const f = (v) => (v == null ? "–" : v.toFixed(3));
+  const p = $("#studyPanel"); p.hidden = false;
+  p.innerHTML = `<h3>Does the LLM know when it is wrong?</h3>
+    <p class="cap" style="margin-top:6px">On ${D.study.n} held-out queries, how well does each confidence score separate the LLM's correct category predictions from its wrong ones? AUROC 0.5 is a coin flip, 1.0 is perfect.</p>
+    <div class="tbl"><table><tr><th>Confidence signal</th><th class="n">AUROC</th><th class="n">AURC</th><th class="n">Distinct values</th></tr>
+    <tr><td>LLM self-reported confidence</td><td class="n">${f(a.auroc)}</td><td class="n">${f(a.aurc)}</td><td class="n">${a.distinct_values}</td></tr>
+    <tr><td><b>Retrieval-based calibrated confidence</b></td><td class="n">${f(b.auroc)}</td><td class="n">${f(b.aurc)}</td><td class="n">${b.distinct_values}</td></tr></table></div>
+    <p class="cap">The 3B model reports only ${a.distinct_values} distinct confidence values and is close to a coin flip at spotting its own mistakes (AUROC ${f(a.auroc)}). The retrieval-based score ranks the same mistakes far better (${f(b.auroc)}). Small sample (n=${D.study.n}), so treat the gap as directional.</p>`;
+}
+
+$("#gapList").innerHTML = D.gaps.slice(0, 6).map((g) => `<div class="gap"><div><h3>${esc(g.keywords.slice(0, 3).join(", "))}</h3><div class="m">${g.size} queries · ${pct(g.share_of_abstained, 0)} of escalations<br>mostly ${esc(g.top_gold_category)} (${pct(g.category_purity, 0)} purity)</div></div><div>${g.examples.slice(0, 2).map((e) => `<blockquote>"${esc(e.replace(/\\n|<br\s*\/?>/g, " ").replace(/\s+/g, " ").slice(0, 190))}…"</blockquote>`).join("")}</div></div>`).join("");
+
+$("#limitList").innerHTML = [
+  ["Small test set.", `The held-out split has ${M.n_holdout} queries (${bs.tickets.n} free-text), so the error estimate for the gate is ${pct(M.at_threshold.holdout.risk)} with a 95% interval of ${pct(M.at_threshold.holdout.risk_ci95[0])} to ${pct(M.at_threshold.holdout.risk_ci95[1])}. The 4,000-query calibration run gives a tighter estimate of ${pct(M.at_threshold.calibration.risk)}.`],
+  ["The label is a proxy.", "Correct means the neighbour-vote category matches the gold category. It does not grade the wording of the written next-best-action."],
+  ["Labels are noisy.", "Some free-text tickets are filed under near-synonym categories such as IT SUPPORT and TECHNICAL SUPPORT. A confident miss in the explorer above is an example. This caps accuracy on that half of the data."],
+  ["Small local model.", "The generator is a 3B model chosen to run on an 8 GB laptop for free. It follows the cite-or-escalate instruction less reliably than a larger model would."],
+].map(([h, t]) => `<li><b>${h}</b> ${t}</li>`).join("");
+
+$("#foot").textContent = `Index ${M.index_size.toLocaleString()} tickets · calibration ${M.n_calibration.toLocaleString()} leave-one-out queries · test ${M.n_holdout} held-out · embeddings ${D.models.embed} · chat ${D.models.chat}`;
+if (GITHUB_URL) $("#links").innerHTML = `<a href="${GITHUB_URL}" target="_blank" rel="noopener">Source code</a>`;
+
+drawRC();
+showQ();
+</script>
