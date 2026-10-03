@@ -166,6 +166,9 @@ def summarise(judge: dict | None = None, human: dict | None = None) -> dict:
     if g is not None and "naive" in out["variants"]:
         nv = load("naive")
         common = g[g["ticket_id"].isin(nv["ticket_id"])]
+        if len(common) < 30:  # too few paired queries to say anything; leave the comparison out
+            return {k: v for k, v in out.items() if k != "same_queries_grounded_vs_naive"} | {"llm_selfescalation_vs_gate": {
+                "llm_escalated_itself": round(float(g["llm_escalate"].mean()), 4), "gate_escalated": round(float(g["gate_abstain"].mean()), 4)}}
         out["same_queries_grounded_vs_naive"] = {
             "n": int(len(common)),
             "grounded": block(common),

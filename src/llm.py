@@ -68,7 +68,11 @@ def get_chat(model: str | None = None, temperature: float = 0.0):
     if config.PROVIDER == "ollama":
         from langchain_ollama import ChatOllama
 
-        return ChatOllama(model=model or config.CHAT_MODEL, temperature=temperature, base_url=config.OLLAMA_BASE_URL)
+        return ChatOllama(
+            model=model or config.CHAT_MODEL, temperature=temperature, base_url=config.OLLAMA_BASE_URL,
+            num_predict=config.MAX_NEW_TOKENS,  # small models can fall into endless loops; cap the output
+            client_kwargs={"timeout": config.LLM_TIMEOUT_S},
+        )
     from langchain_openai import ChatOpenAI
 
     return ChatOpenAI(model=model or config.CHAT_MODEL, temperature=temperature, max_retries=5, timeout=60)

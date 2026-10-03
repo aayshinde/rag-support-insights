@@ -143,7 +143,10 @@ the Dockerfile and compose file are included but were not built or run on the de
 ### Deployment notes
 `Dockerfile` and `docker-compose.yml` run the API with Ollama (`PROVIDER=ollama`, `OLLAMA_BASE_URL`). GitHub Actions
 (`.github/workflows/ci.yml`) runs the offline tests on every push. `python -m src.benchmark` measures latency and the
-share of LLM calls the gate avoids.
+share of LLM calls the gate avoids, and `python -m src.judge_sample` scores faithfulness with a 7B judge. Neither was run on the
+8 GB development laptop: it ran out of memory and the 7B model froze it, so those two results are not reported. A grounded-vs-naive
+prompt comparison (`--variants naive`) was also cut short and is omitted. LLM output length is capped (`MAX_NEW_TOKENS`) after a
+3B model looped for thousands of tokens on one query.
 
 ## Configuration (`.env`)
 

@@ -25,6 +25,9 @@ CHAT_MODEL = os.getenv("CHAT_MODEL", "gpt-4o-mini")
 JUDGE_MODEL = os.getenv("JUDGE_MODEL", "gpt-4o-mini")
 EMBED_MODEL = os.getenv("EMBED_MODEL", "text-embedding-3-small")
 
+MAX_NEW_TOKENS = int(os.getenv("MAX_NEW_TOKENS", "700"))   # a structured answer is ~200-300 tokens
+LLM_TIMEOUT_S = float(os.getenv("LLM_TIMEOUT_S", "120"))
+
 TOP_K = int(os.getenv("TOP_K", "5"))
 # Retrieved chunks with a cosine similarity below this are dropped in the
 # "grounded" pipeline so the model is not fed irrelevant context.

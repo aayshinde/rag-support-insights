@@ -15,7 +15,7 @@ import pandas as pd
 from src import config
 from src.ingest import load_index
 from src.rag import SupportRAG
-from src.reliability import ConfidenceModel, _docs, batch_features, embed_queries, search_vectors
+from src.reliability import ConfidenceModel, _docs, batch_features, load_eval_data, search_vectors
 
 OUT = config.RESULTS_DIR / "demo_data.json"
 SHOWCASE_CACHE = config.RESULTS_DIR / "demo_showcase.json"
@@ -45,7 +45,7 @@ def main() -> None:
     docs = _docs(store)
     test = pd.read_csv(config.TEST_CSV)
 
-    vecs = embed_queries(test["query"].tolist())
+    vecs = load_eval_data(4000, config.TOP_K)["hold_vecs"]  # cached embeddings: no LLM needed
     scores, cats = search_vectors(store, vecs, config.TOP_K)
     pred, X = batch_features(scores, cats)
     conf = gate.predict_proba(X)
