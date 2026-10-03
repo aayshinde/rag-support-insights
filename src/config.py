@@ -19,6 +19,7 @@ TEST_CSV = DATA_DIR / "eval_holdout.csv"     # held-out records never indexed
 
 # "openai" (default) or "ollama" for a free local setup
 PROVIDER = os.getenv("PROVIDER", "openai")
+OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL")  # e.g. http://ollama:11434 inside docker-compose; default is localhost
 
 CHAT_MODEL = os.getenv("CHAT_MODEL", "gpt-4o-mini")
 JUDGE_MODEL = os.getenv("JUDGE_MODEL", "gpt-4o-mini")

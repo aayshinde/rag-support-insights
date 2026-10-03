@@ -1,0 +1,21 @@
+# Local, free stack: Ollama (LLM + embeddings) + the FastAPI service.
+#   docker compose up -d ollama
+#   docker compose exec ollama ollama pull llama3.2:3b && docker compose exec ollama ollama pull nomic-embed-text
+#   python -m src.ingest            # builds ./index on the host (or run it inside the api container)
+#   docker compose up -d api        # http://localhost:8000/docs
+services:
+  ollama:
+    image: ollama/ollama:latest
+    ports: ["11434:11434"]
+    volumes: [ollama:/root/.ollama]
+  api:
+    build: .
+    depends_on: [ollama]
+    ports: ["8000:8000"]
+    environment:
+      OLLAMA_BASE_URL: http://ollama:11434
+    volumes:
+      - ./index:/app/index
+      - ./results:/app/results
+volumes:
+  ollama:

@@ -42,7 +42,7 @@ if meta_path.exists():
         f"embeddings `{meta['embed_model']}` · chat `{config.CHAT_MODEL}`"
     )
 
-tab_triage, tab_rel, tab_eval = st.tabs(["Triage a ticket", "Reliability & gaps", "Evaluation"])
+tab_triage, tab_rel, tab_extra, tab_eval = st.tabs(["Triage a ticket", "Reliability & gaps", "Stress & failures", "Evaluation"])
 
 # ------------------------------------------------------------------ triage
 with tab_triage:
@@ -75,8 +75,10 @@ with tab_triage:
                   f"{(cc if cc is not None else ins['confidence']):.0%}")
         m4.metric("kNN vote", res.get("knn_category") or "—")
         if res.get("abstained"):
-            st.error("Confidence gate: retrieval evidence is too weak to trust an automatic answer — escalated "
-                     "to a human without calling the LLM.")
+            why = ("nothing in the knowledge base resembles this message (relevance guard)"
+                   if res.get("abstain_reason") == "out_of_domain"
+                   else "the retrieved tickets disagree on how to handle it (confidence gate)")
+            st.error(f"Escalated to a human without calling the LLM: {why}.")
         elif ins["escalate"]:
             st.warning("Sources don't cover this issue well — route to a human agent.")
         st.subheader("Next best action")
@@ -122,6 +124,24 @@ with tab_rel:
                              f"purity {gp['category_purity']:.0%} {gp['top_gold_category']}"):
                 for e in gp["examples"]:
                     st.markdown(f"> {e}")
+
+# ------------------------------------------------------------------ stress tests, baselines, failures
+with tab_extra:
+    def show_md(name: str, empty: str):
+        p = config.RESULTS_DIR / name
+        st.markdown(p.read_text().replace("(reliability.png)", "").replace("![baselines](baselines.png)", "")) if p.exists() else st.info(empty)
+
+    sub1, sub2, sub3, sub4 = st.tabs(["Stress tests", "Baselines", "Failure analysis", "Answer quality"])
+    with sub1:
+        show_md("stress_test.md", "Run `python -m src.stress_test`.")
+    with sub2:
+        show_md("baselines.md", "Run `python -m src.baselines`.")
+        if (config.RESULTS_DIR / "baselines.png").exists():
+            st.image(str(config.RESULTS_DIR / "baselines.png"))
+    with sub3:
+        show_md("failure_analysis.md", "Run `python -m src.failure_analysis`.")
+    with sub4:
+        show_md("answer_eval.md", "Run `python -m src.answer_eval --variants grounded`.")
 
 # ------------------------------------------------------------------ evaluation
 with tab_eval:

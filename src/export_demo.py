@@ -49,6 +49,7 @@ def main() -> None:
     scores, cats = search_vectors(store, vecs, config.TOP_K)
     pred, X = batch_features(scores, cats)
     conf = gate.predict_proba(X)
+    reasons = [gate.decide(sc, ct)[2] for sc, ct in zip(scores, cats)]
     # neighbour details (search_vectors drops them, so look up again)
     raw_scores, raw_idx = store.index.search(vecs.astype(np.float32), config.TOP_K)
 
@@ -67,7 +68,8 @@ def main() -> None:
                 "pred": pred[i],
                 "conf": round(float(conf[i]), 4),
                 "ok": bool(pred[i] == r["category"]),
-                "abstain": bool(conf[i] < gate.tau),
+                "abstain": reasons[i] is not None,
+                "reason": reasons[i],
                 "nn": nn,
             }
         )
@@ -89,21 +91,33 @@ def main() -> None:
                 "steps": [clip(s, 200) for s in ins["steps"][:4]],
                 "escalate": ins["escalate"],
                 "abstained": res.abstained,
+                "reason": res.abstain_reason,
             }
             print("showcase", tid, res.abstained)
         SHOWCASE_CACHE.write_text(json.dumps(showcase, indent=1))
 
     rel = json.loads((config.RESULTS_DIR / "reliability.json").read_text())
     study_path = config.RESULTS_DIR / "confidence_study.json"
+    def load_json(name):
+        p = config.RESULTS_DIR / name
+        return json.loads(p.read_text()) if p.exists() else None
+
     data = {
         "meta": {k: rel[k] for k in ("n_calibration", "n_holdout", "index_size", "k", "target_risk", "tau",
                                       "baseline_accuracy", "aurc", "ece", "at_threshold", "by_source",
-                                      "within_source_aurc", "coefficients")},
+                                      "within_source_aurc", "model", "importance", "ood_top1")},
         "gaps": rel["knowledge_gaps"],
         "cal": json.loads((config.RESULTS_DIR / "cal_points.json").read_text()),
         "holdout": rows,
         "showcase": showcase,
         "study": json.loads(study_path.read_text()) if study_path.exists() else None,
+        "baselines": load_json("baselines.json"),
+        "stress": load_json("stress_test.json"),
+        "stress_aug": load_json("stress_test_aug.json"),
+        "stress_before": load_json("stress_test_before.json"),
+        "failure": load_json("failure_analysis.json"),
+        "answer": load_json("answer_eval.json"),
+        "bench": load_json("benchmark.json"),
         "models": {"chat": config.CHAT_MODEL, "embed": config.EMBED_MODEL},
     }
     OUT.write_text(json.dumps(data, separators=(",", ":")))

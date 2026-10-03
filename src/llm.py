@@ -57,7 +57,7 @@ def get_embeddings() -> Embeddings:
     if config.PROVIDER == "ollama":
         from langchain_ollama import OllamaEmbeddings
 
-        return NormalizedEmbeddings(OllamaEmbeddings(model=config.EMBED_MODEL))
+        return NormalizedEmbeddings(OllamaEmbeddings(model=config.EMBED_MODEL, base_url=config.OLLAMA_BASE_URL))
     from langchain_openai import OpenAIEmbeddings
 
     return OpenAIEmbeddings(model=config.EMBED_MODEL, chunk_size=500)
@@ -68,7 +68,7 @@ def get_chat(model: str | None = None, temperature: float = 0.0):
     if config.PROVIDER == "ollama":
         from langchain_ollama import ChatOllama
 
-        return ChatOllama(model=model or config.CHAT_MODEL, temperature=temperature)
+        return ChatOllama(model=model or config.CHAT_MODEL, temperature=temperature, base_url=config.OLLAMA_BASE_URL)
     from langchain_openai import ChatOpenAI
 
     return ChatOpenAI(model=model or config.CHAT_MODEL, temperature=temperature, max_retries=5, timeout=60)

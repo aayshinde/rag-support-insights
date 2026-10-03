@@ -49,6 +49,7 @@ class RagResult:
     knn_category: str | None = None   # majority vote over neighbours (non-LLM baseline)
     calibrated_confidence: float | None = None  # P(triage correct) from retrieval evidence (src.reliability)
     abstained: bool = False           # True when the confidence gate overrode the answer with an escalation
+    abstain_reason: str | None = None  # "out_of_domain" (nothing similar in the KB) or "low_confidence" (neighbours disagree)
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -139,10 +140,10 @@ class SupportRAG:
         context = format_sources(docs)
         knn = knn_vote(scored)
 
-        confidence, abstained = None, False
+        confidence, abstained, reason = None, False, None
         if self.gate is not None and raw:
-            _, confidence = self.gate.confidence([s for _, s in raw], [d.metadata["category"] for d, _ in raw])
-            abstained = variant == "grounded" and confidence < self.gate.tau
+            _, confidence, reason = self.gate.decide([s for _, s in raw], [d.metadata["category"] for d, _ in raw])
+            abstained = variant == "grounded" and reason is not None
 
         if abstained:  # evidence too weak: skip the LLM call entirely and hand off to a human
             insight = SupportInsight(
@@ -180,6 +181,7 @@ class SupportRAG:
             knn_category=knn,
             calibrated_confidence=None if confidence is None else round(confidence, 4),
             abstained=abstained,
+            abstain_reason=reason if abstained else None,
         )
 
 

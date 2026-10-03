@@ -112,6 +112,22 @@ def search_vectors(store, vecs: np.ndarray, k: int, exclude_ids: list[str] | Non
     return np.array(score_rows), cat_rows
 
 
+def add_typos(text: str, rng, rate: float = 0.08) -> str:
+    """Character-level noise: drop, double or substitute ~rate of the letters."""
+    out = []
+    for ch in text:
+        r = rng.random()
+        if not ch.isalpha() or r > rate:
+            out.append(ch)
+        elif r < rate / 3:
+            continue
+        elif r < 2 * rate / 3:
+            out.append(ch + ch)
+        else:
+            out.append(rng.choice("abcdefghijklmnopqrstuvwxyz"))
+    return "".join(out)
+
+
 def embed_queries(texts: list[str]) -> np.ndarray:
     return np.asarray(get_embeddings().embed_documents(texts), dtype=np.float32)
 
@@ -121,9 +137,15 @@ def embed_queries(texts: list[str]) -> np.ndarray:
 
 @dataclass
 class ConfidenceModel:
+    """Two-stage gate. Stage 1 (relevance): raw top-1 similarity below `ood_top1` means nothing in the
+    knowledge base resembles the query, so escalate. Raw similarity is useless for ranking answer
+    correctness inside the domain but separates out-of-domain text almost perfectly (see src.stress_test).
+    Stage 2 (correctness): calibrated P(triage correct) below `tau` means the neighbours disagree, so escalate."""
+
     pipeline: object
     tau: float
     target_risk: float
+    ood_top1: float | None = None
 
     def predict_proba(self, feats: np.ndarray) -> np.ndarray:
         return self.pipeline.predict_proba(np.atleast_2d(feats))[:, 1]
@@ -132,19 +154,37 @@ class ConfidenceModel:
         winner, f = vote_features(scores, cats)
         return winner, float(self.predict_proba(f)[0])
 
+    def decide(self, scores, cats: list[str]) -> tuple[str, float, str | None]:
+        """Return (neighbour-vote category, calibrated confidence, escalation reason or None)."""
+        winner, f = vote_features(scores, cats)
+        conf = float(self.predict_proba(f)[0])
+        if self.ood_top1 is not None and f[0] < self.ood_top1:
+            return winner, conf, "out_of_domain"
+        return winner, conf, "low_confidence" if conf < self.tau else None
+
     def save(self, path=MODEL_PATH) -> None:
-        joblib.dump({"pipeline": self.pipeline, "tau": self.tau, "target_risk": self.target_risk, "features": FEATURES}, path)
+        joblib.dump({"pipeline": self.pipeline, "tau": self.tau, "target_risk": self.target_risk,
+                     "ood_top1": self.ood_top1, "features": FEATURES}, path)
 
     @classmethod
     def load(cls, path=MODEL_PATH) -> "ConfidenceModel | None":
         if not path.exists():
             return None
         d = joblib.load(path)
-        return cls(d["pipeline"], d["tau"], d["target_risk"])
+        return cls(d["pipeline"], d["tau"], d["target_risk"], d.get("ood_top1"))
 
 
 def make_pipeline_model():
     return make_pipeline(StandardScaler(), LogisticRegression(C=1.0, max_iter=1000))
+
+
+def make_gate_model(kind: str = "gb"):
+    """gb = gradient boosting (deployed: better ranking and calibration, see src.baselines); logistic = simple baseline."""
+    if kind == "logistic":
+        return make_pipeline_model()
+    from sklearn.ensemble import HistGradientBoostingClassifier
+
+    return HistGradientBoostingClassifier(max_depth=3, learning_rate=0.08, max_iter=150, random_state=config.SEED)
 
 
 # ---------------------------------------------------------------- selective-prediction metrics
@@ -292,47 +332,91 @@ def _plots(path, cal, hold, tau):
     fig.savefig(path, dpi=140)
 
 
-def main() -> None:
-    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--n-cal", type=int, default=2000, help="knowledge-base queries used for leave-one-out calibration")
-    ap.add_argument("--target-risk", type=float, default=0.10, help="max error rate allowed on answered queries")
-    ap.add_argument("--k", type=int, default=config.TOP_K)
-    args = ap.parse_args()
-
+def load_eval_data(n_cal: int, k: int, typos: int = 0) -> dict:
+    """Shared by every analysis: leave-one-out calibration queries drawn from the index, plus the
+    held-out split, with embeddings cached on disk and neighbours retrieved the same way for both."""
     store = load_index()
     docs = _docs(store)
     rng = np.random.default_rng(config.SEED)
-    pick = rng.choice(len(docs), size=min(args.n_cal, len(docs)), replace=False)
+    pick = rng.choice(len(docs), size=min(n_cal, len(docs)), replace=False)
     cal_texts = [docs[i].metadata["query"] for i in pick]
     cal_ids = [docs[i].metadata["ticket_id"] for i in pick]
     cal_gold = [docs[i].metadata["category"] for i in pick]
     src_of = pd.read_csv(config.KB_CSV).set_index("ticket_id")["source"].to_dict()
-    cal_src = [src_of[t] for t in cal_ids]
-
-    cache = config.RESULTS_DIR / f"cal_emb_{len(docs)}_{len(pick)}_{config.EMBED_MODEL.replace(':', '_')}.npy"
+    tag = f"{len(docs)}_{len(pick)}_{config.EMBED_MODEL.replace(':', '_')}"
+    cache = config.RESULTS_DIR / f"cal_emb_{tag}.npy"
     if cache.exists():
         cal_vecs = np.load(cache)
     else:
         print(f"Embedding {len(pick)} calibration queries ...")
         cal_vecs = embed_queries(cal_texts)
         np.save(cache, cal_vecs)
-
     test = pd.read_csv(config.TEST_CSV)
-    print(f"Embedding {len(test)} held-out queries ...")
-    hold_vecs = embed_queries(test["query"].tolist())
+    hcache = config.RESULTS_DIR / f"hold_emb_{len(test)}_{config.EMBED_MODEL.replace(':', '_')}.npy"
+    if hcache.exists():
+        hold_vecs = np.load(hcache)
+    else:
+        print(f"Embedding {len(test)} held-out queries ...")
+        hold_vecs = embed_queries(test["query"].tolist())
+        np.save(hcache, hold_vecs)
+    cs, cc = search_vectors(store, cal_vecs, k, exclude_ids=cal_ids)
+    hs, hc = search_vectors(store, hold_vecs, k)
+    noisy = {}
+    if typos:
+        import random
 
-    cs, cc = search_vectors(store, cal_vecs, args.k, exclude_ids=cal_ids)
-    hs, hc = search_vectors(store, hold_vecs, args.k)
-    cal_pred, Xc = batch_features(cs, cc)
-    hold_pred, Xh = batch_features(hs, hc)
+        rnd = random.Random(config.SEED)
+        ntexts = [add_typos(t, rnd) for t in cal_texts[:typos]]
+        ncache = config.RESULTS_DIR / f"cal_noisy_emb_{tag}_{typos}.npy"
+        if ncache.exists():
+            nvecs = np.load(ncache)
+        else:
+            print(f"Embedding {typos} noisy calibration queries ...")
+            nvecs = embed_queries(ntexts)
+            np.save(ncache, nvecs)
+        ns, nc = search_vectors(store, nvecs, k, exclude_ids=cal_ids[:typos])
+        noisy = dict(ns=ns, nc=nc, n_noisy=typos)
+    return dict(**noisy, store=store, docs=docs, pick=pick, cal_texts=cal_texts, cal_ids=cal_ids, cal_gold=cal_gold,
+                cal_src=[src_of[t] for t in cal_ids], cal_vecs=cal_vecs, test=test, hold_vecs=hold_vecs,
+                cs=cs, cc=cc, hs=hs, hc=hc)
+
+
+def main() -> None:
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--n-cal", type=int, default=2000, help="knowledge-base queries used for leave-one-out calibration")
+    ap.add_argument("--target-risk", type=float, default=0.10, help="max error rate allowed on answered queries")
+    ap.add_argument("--k", type=int, default=config.TOP_K)
+    ap.add_argument("--model", choices=["gb", "logistic"], default="gb")
+    ap.add_argument("--augment-typos", type=int, default=0, help="also train on this many typo-noised copies of calibration queries")
+    ap.add_argument("--ood-percentile", type=float, default=1.0, help="top-1 similarity percentile of in-domain queries used as the relevance cut-off")
+    args = ap.parse_args()
+
+    ev = load_eval_data(args.n_cal, args.k, typos=args.augment_typos)
+    store, docs = ev["store"], ev["docs"]
+    rng = np.random.default_rng(config.SEED)
+    test, cal_vecs, hold_vecs = ev["test"], ev["cal_vecs"], ev["hold_vecs"]
+    cal_texts, cal_ids, cal_gold, cal_src, pick = ev["cal_texts"], ev["cal_ids"], ev["cal_gold"], ev["cal_src"], ev["pick"]
+    cal_pred, Xc = batch_features(ev["cs"], ev["cc"])
+    hold_pred, Xh = batch_features(ev["hs"], ev["hc"])
     yc = np.array([p == g for p, g in zip(cal_pred, cal_gold)])
     yh = np.array([p == g for p, g in zip(hold_pred, test["category"])])
 
-    # out-of-fold confidences for the calibration pool, then the final model on all of it
-    oof = cross_val_predict(make_pipeline_model(), Xc, yc, cv=5, method="predict_proba")[:, 1]
-    model = make_pipeline_model().fit(Xc, yc)
+    # training set: clean leave-one-out queries, optionally plus typo-noised copies (same labels).
+    # Folds are grouped by source query so a clean query and its noisy copy never straddle train/test.
+    Xtr, ytr, groups = Xc, yc, np.arange(len(yc))
+    if args.augment_typos:
+        n = ev["n_noisy"]
+        npred, Xn = batch_features(ev["ns"], ev["nc"])
+        yn = np.array([p == g for p, g in zip(npred, cal_gold[:n])])
+        Xtr, ytr, groups = np.vstack([Xc, Xn]), np.r_[yc, yn], np.r_[np.arange(len(yc)), np.arange(n)]
+    from sklearn.model_selection import GroupKFold
+
+    oof_all = cross_val_predict(make_gate_model(args.model), Xtr, ytr, cv=GroupKFold(5), groups=groups, method="predict_proba")[:, 1]
+    oof = oof_all[: len(yc)]  # evaluate on the clean queries only
+    model = make_gate_model(args.model).fit(Xtr, ytr)
     tau = pick_tau(oof, yc, args.target_risk)
-    cm = ConfidenceModel(model, tau, args.target_risk)
+    ood = float(np.percentile(Xc[:, 0], args.ood_percentile))
+    cm = ConfidenceModel(model, tau, args.target_risk, ood_top1=ood)
     cm.save()
     hold_conf = cm.predict_proba(Xh)
 
@@ -366,7 +450,11 @@ def main() -> None:
             }
             for src in sorted(set(cal_src))
         },
-        "coefficients": dict(zip(FEATURES, np.round(model[-1].coef_[0], 3).tolist())),
+        "model": args.model,
+        "augment_typos": args.augment_typos,
+        "ood_top1": round(ood, 4),
+        "false_escalation_ood_guard_holdout": round(float((Xh[:, 0] < ood).mean()), 4),
+        "importance": dict(zip(FEATURES, np.round(_importance(model, Xc, yc), 4).tolist())),
     }
 
     all_texts = cal_texts + test["query"].tolist()
@@ -387,6 +475,14 @@ def main() -> None:
     )
     write_report(summary, config.RESULTS_DIR / "reliability.md")
     print((config.RESULTS_DIR / "reliability.md").read_text())
+
+
+def _importance(model, X, y) -> np.ndarray:
+    """Permutation importance (drop in log-loss when a feature is shuffled); works for any model."""
+    from sklearn.inspection import permutation_importance
+
+    r = permutation_importance(model, X, y, n_repeats=5, random_state=config.SEED, scoring="neg_log_loss")
+    return r.importances_mean
 
 
 def write_report(s: dict, path) -> None:
@@ -443,7 +539,7 @@ def write_report(s: dict, path) -> None:
         ],
         "",
         f"Calibration error (ECE): {s['ece']['calibrated_model']:.3f} out-of-fold, {s['ece']['holdout']:.3f} held-out.",
-        f"Standardised coefficients: {s['coefficients']}",
+        f"Gate model: `{s['model']}`. Permutation importance (log-loss increase when shuffled): {s['importance']}",
         "",
         "![risk-coverage](reliability.png)",
         "",

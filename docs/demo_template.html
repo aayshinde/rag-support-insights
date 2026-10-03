@@ -62,6 +62,11 @@ section { padding-block: 56px 0; }
 .stat.key b { color: var(--accent); }
 @media (max-width: 720px) { .stats { grid-template-columns: repeat(2, 1fr); } }
 
+.nav { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 0.86rem; }
+.nav a { color: var(--ink2); text-decoration: none; border-bottom: 1px solid var(--line); padding-bottom: 1px; }
+.nav a:hover { color: var(--accent); border-color: var(--accent); }
+.hl td { font-weight: 600; background: var(--accent-soft); }
+.sm { font-size: 0.8rem; color: var(--muted); }
 /* pipeline */
 .pipe-scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
 .pipe { min-width: 760px; width: 100%; display: block; }
@@ -180,7 +185,8 @@ footer { margin-top: 64px; padding-top: 18px; border-top: 1px solid var(--line);
 <header class="hero">
   <div class="eyebrow">AI / ML engineering project · retrieval-augmented generation · evaluation</div>
   <h1>A support-ticket triage system that knows when not to answer.</h1>
-  <p class="lede">It searches 48,178 past tickets, drafts a next-best-action with a local LLM, and escalates to a human whenever the retrieved evidence is too weak to trust. This page is built from its real results on tickets it never saw.</p>
+  <p class="lede">It searches 48,178 past tickets, drafts a next-best-action with a local LLM, and escalates to a human whenever the retrieved evidence is too weak to trust or the message is outside what the knowledge base covers. This page is built from its real results on tickets it never saw, including the places it fails.</p>
+  <nav class="nav" aria-label="Sections"><a href="#threshold">Trade-off</a><a href="#try">Try it</a><a href="#findings">Baselines</a><a href="#stress">Stress tests</a><a href="#answers">Answer quality</a><a href="#failures">Failure analysis</a><a href="#bench">Latency</a><a href="#limits">Limits</a></nav>
   <div class="chips" id="chips"></div>
   <div class="stats" id="stats"></div>
 </header>
@@ -188,7 +194,7 @@ footer { margin-top: 64px; padding-top: 18px; border-top: 1px solid var(--line);
 <section id="how">
   <div class="sec-head">
     <h2>How a message flows through it</h2>
-    <p>The confidence gate is the new part. It reads the retrieved tickets, predicts the chance that the triage is correct, and decides before the LLM is called.</p>
+    <p>The gate is the new part. It first checks that the message resembles anything in the knowledge base, then predicts the chance that the triage is correct, and decides before the LLM is called.</p>
   </div>
   <div class="pipe-scroll">
     <svg class="pipe" viewBox="0 0 860 190" role="img" aria-label="Pipeline: customer message, embed and search 48K tickets, confidence gate, then either LLM answer or human escalation">
@@ -202,9 +208,9 @@ footer { margin-top: 64px; padding-top: 18px; border-top: 1px solid var(--line);
       <text class="sub" x="305" y="110" text-anchor="middle">FAISS · top 5 of 48,178</text>
       <path class="arrow" d="M400 95 H444" marker-end="url(#ah)"/>
       <rect class="gate" x="446" y="52" width="190" height="86" rx="8"/>
-      <text x="541" y="82" text-anchor="middle" font-size="14" font-weight="700">Confidence gate</text>
-      <text class="sub" x="541" y="102" text-anchor="middle">P(triage correct)</text>
-      <text class="sub" x="541" y="120" text-anchor="middle">vs threshold τ</text>
+      <text x="541" y="82" text-anchor="middle" font-size="14" font-weight="700">Two-stage gate</text>
+      <text class="sub" x="541" y="102" text-anchor="middle">1. relevant to the KB?</text>
+      <text class="sub" x="541" y="120" text-anchor="middle">2. P(correct) ≥ τ?</text>
       <path class="arrow" d="M636 78 C 660 78, 664 40, 690 40" marker-end="url(#ah)"/>
       <path class="arrow" d="M636 112 C 660 112, 664 150, 690 150" marker-end="url(#ah)"/>
       <rect class="ok" x="692" y="14" width="156" height="56" rx="8"/>
@@ -260,10 +266,9 @@ footer { margin-top: 64px; padding-top: 18px; border-top: 1px solid var(--line);
   </div>
   <div class="grid2">
     <div class="panel">
-      <h3>Raw similarity is a poor trust signal</h3>
-      <p class="cap" style="margin-top:6px">Area under the risk-coverage curve on held-out queries. Lower is better.</p>
-      <div class="rows" id="aurcRows"></div>
-      <p class="cap">Raw top-1 similarity is worse than random. Neighbour agreement does nearly all of the work, and the calibrated model adds a small edge and a usable probability.</p>
+      <h3>Does the learned gate beat simpler methods?</h3>
+      <div class="tbl"><table id="baseTbl"></table></div>
+      <p class="cap" id="baseCap"></p>
     </div>
     <div class="panel">
       <h3>The data hides two different problems</h3>
@@ -272,6 +277,49 @@ footer { margin-top: 64px; padding-top: 18px; border-top: 1px solid var(--line);
     </div>
   </div>
   <div class="panel" id="studyPanel" style="margin-top:18px" hidden></div>
+</section>
+
+<section id="stress">
+  <div class="sec-head">
+    <h2>Stress tests on text it was never built for</h2>
+    <p>Real public datasets with no overlap with the knowledge base: CLINC150 out-of-scope and everyday-assistant queries, and Banking77 customer messages from a neighbouring domain.</p>
+  </div>
+  <div class="grid2">
+    <div class="panel"><h3>Does it escalate what it should never answer?</h3><div class="tbl"><table id="oodTbl"></table></div><p class="cap" id="oodCap"></p></div>
+    <div class="panel"><h3>Typos (about 8% of letters corrupted)</h3><div class="tbl"><table id="typoTbl"></table></div><p class="cap" id="typoCap"></p></div>
+  </div>
+</section>
+
+<section id="answers" hidden>
+  <div class="sec-head">
+    <h2>Are the written answers any good?</h2>
+    <p>Scored against the held-out ticket's gold intent and its real human resolution, with and without the gate. No LLM judge is needed for these.</p>
+  </div>
+  <div class="panel"><div class="tbl"><table id="ansTbl"></table></div><p class="cap" id="ansCap"></p></div>
+  <div class="grid2" style="margin-top:18px">
+    <div class="panel" id="cmpPanel" hidden><h3>Grounded prompt vs naive prompt</h3><div class="tbl"><table id="cmpTbl"></table></div><p class="cap" id="cmpCap"></p></div>
+    <div class="panel" id="judgePanel" hidden><h3>Stronger-model judge on a sample</h3><div class="tbl"><table id="judgeTbl"></table></div><p class="cap" id="judgeCap"></p></div>
+  </div>
+</section>
+
+<section id="failures">
+  <div class="sec-head">
+    <h2>Failure analysis</h2>
+    <p id="failLede"></p>
+  </div>
+  <div class="grid2">
+    <div class="panel"><h3>Most confused category pairs</h3><div class="tbl"><table id="confTbl"></table></div><p class="cap" id="confCap"></p></div>
+    <div class="panel"><h3>What if the overlapping labels were merged?</h3><div class="tbl"><table id="mergeTbl"></table></div><p class="cap" id="mergeCap"></p></div>
+  </div>
+  <div class="panel" style="margin-top:18px"><h3>Confident misses the gate cannot catch</h3><div class="gaps" id="missList"></div></div>
+</section>
+
+<section id="bench" hidden>
+  <div class="sec-head">
+    <h2>Latency and compute</h2>
+    <p>Measured on the same 8 GB laptop with a local 3B model. Escalated queries skip the LLM call.</p>
+  </div>
+  <div class="panel"><div class="tbl"><table id="benchTbl"></table></div><p class="cap" id="benchCap"></p></div>
 </section>
 
 <section id="gaps">
@@ -316,10 +364,11 @@ const H = D.holdout;
 const acc = 1 - M.at_threshold.holdout.risk;
 $("#chips").innerHTML = ["Python", "FAISS", "LangChain", "Ollama · llama3.2 3B", "nomic-embed-text", "FastAPI", "Streamlit", "scikit-learn"]
   .map((t) => `<span class="chip">${t}</span>`).join("");
+const oos = D.stress && D.stress.sets["out-of-scope (CLINC oos)"];
 $("#stats").innerHTML = [
   [pct(M.baseline_accuracy.holdout), "correct if it answers everything", ""],
-  [pct(acc), "correct on what it chooses to answer", "key"],
-  [pct(M.at_threshold.holdout.coverage, 0), "of queries still answered automatically", ""],
+  [pct(acc), `correct on what it answers (${pct(M.at_threshold.holdout.coverage, 0)} of queries)`, "key"],
+  [oos ? pct(oos.escalated, 0) : "n/a", "of out-of-scope messages escalated instead of answered", ""],
   [M.index_size.toLocaleString(), "past tickets searched · $0 to run", ""],
 ].map(([b, s, k]) => `<div class="stat ${k}"><b>${b}</b><span>${s}</span></div>`).join("");
 
@@ -411,13 +460,14 @@ function showQ() {
   document.querySelectorAll("#qlist .qbtn").forEach((b) => b.setAttribute("aria-pressed", b.dataset.id === sel));
   const state = r.abstain ? "esc" : "ok";
   let out;
-  if (s && s.abstained) out = `<div class="out"><h3>Escalated to a human</h3><p>The retrieved tickets do not agree on how to handle this, so the system skipped the LLM call. Suggested neighbour-vote category: <b>${esc(s.category)}</b>.</p></div>`;
+  const why = r.reason === "out_of_domain" ? "Nothing in the knowledge base resembles this message" : "The retrieved tickets do not agree on how to handle this";
+  if (s && s.abstained) out = `<div class="out"><h3>Escalated to a human</h3><p>${why}, so the system skipped the LLM call. Suggested neighbour-vote category: <b>${esc(s.category)}</b>.</p></div>`;
   else if (s) out = `<div class="out"><div class="eyebrow">LLM output (llama3.2 3B, grounded prompt)</div><h3>${esc(s.category)} · ${esc(s.intent)}</h3><p>${esc(s.action)}</p><ul>${s.steps.map((x) => `<li>${esc(x)}</li>`).join("")}</ul></div>`;
   else out = `<div class="out"><h3>${r.abstain ? "Escalated to a human" : "Answered automatically"}</h3><p>Neighbour-vote category: <b>${esc(r.pred)}</b>. The LLM-written action is precomputed only for the featured examples to keep this page static.</p></div>`;
   $("#detail").innerHTML = `
     <div class="qbox"><small class="eyebrow">Customer message · ${r.src === "tickets" ? "free-text ticket" : "short templated message"}</small>${esc(r.q)}</div>
     <div class="meter">
-      <div class="meter-top"><span><b class="mono">${pct(r.conf, 0)}</b> calibrated chance the triage is correct</span><span class="pill ${state}">${r.abstain ? "Escalated to a human" : "Answered automatically"}</span></div>
+      <div class="meter-top"><span><b class="mono">${pct(r.conf, 0)}</b> calibrated chance the triage is correct</span><span class="pill ${state}">${r.abstain ? (r.reason === "out_of_domain" ? "Escalated: out of domain" : "Escalated: neighbours disagree") : "Answered automatically"}</span></div>
       <div class="bar" role="img" aria-label="confidence ${pct(r.conf, 0)}, threshold ${pct(TAU0, 0)}"><i style="width:${r.conf * 100}%;background:var(--${state === "ok" ? "ok" : "warn"})"></i><b style="left:${TAU0 * 100}%"></b></div>
       <div class="bar-lab"><span>0%</span><span>threshold ${pct(TAU0, 0)}</span><span>100%</span></div>
     </div>
@@ -427,9 +477,6 @@ function showQ() {
 }
 
 /* ---------- findings ---------- */
-const order = [["calibrated_model", "Calibrated model", true], ["vote_share", "Neighbour vote share", false], ["random", "Random ordering", false], ["raw_top1", "Raw top-1 similarity", false]];
-const aurcMax = Math.max(...order.map(([k]) => M.aurc[k].holdout));
-$("#aurcRows").innerHTML = order.map(([k, n, us]) => `<div class="row ${us ? "us" : ""}"><span>${n}</span><span class="t"><i style="width:${(M.aurc[k].holdout / aurcMax) * 100}%"></i></span><b>${M.aurc[k].holdout.toFixed(3)}</b></div>`).join("");
 const bs = M.by_source.holdout;
 $("#srcTbl").innerHTML = `<tr><th>Source</th><th class="n">n</th><th class="n">Answer all</th><th class="n">Coverage</th><th class="n">Wrong</th></tr>` +
   Object.entries(bs).map(([k, v]) => `<tr><td>${k === "bitext" ? "Short templated" : "Free-text tickets"}</td><td class="n">${v.n}</td><td class="n">${pct(v.baseline_accuracy, 0)} correct</td><td class="n">${pct(v.coverage, 0)}</td><td class="n">${v.error_on_answered == null ? "–" : pct(v.error_on_answered)}</td></tr>`).join("");
@@ -450,14 +497,77 @@ if (D.study && D.study.signals) {
 $("#gapList").innerHTML = D.gaps.slice(0, 6).map((g) => `<div class="gap"><div><h3>${esc(g.keywords.slice(0, 3).join(", "))}</h3><div class="m">${g.size} queries · ${pct(g.share_of_abstained, 0)} of escalations<br>mostly ${esc(g.top_gold_category)} (${pct(g.category_purity, 0)} purity)</div></div><div>${g.examples.slice(0, 2).map((e) => `<blockquote>"${esc(e.replace(/\\n|<br\s*\/?>/g, " ").replace(/\s+/g, " ").slice(0, 190))}…"</blockquote>`).join("")}</div></div>`).join("");
 
 $("#limitList").innerHTML = [
-  ["Small test set.", `The held-out split has ${M.n_holdout} queries (${bs.tickets.n} free-text), so the error estimate for the gate is ${pct(M.at_threshold.holdout.risk)} with a 95% interval of ${pct(M.at_threshold.holdout.risk_ci95[0])} to ${pct(M.at_threshold.holdout.risk_ci95[1])}. The 4,000-query calibration run gives a tighter estimate of ${pct(M.at_threshold.calibration.risk)}.`],
-  ["The label is a proxy.", "Correct means the neighbour-vote category matches the gold category. It does not grade the wording of the written next-best-action."],
-  ["Labels are noisy.", "Some free-text tickets are filed under near-synonym categories such as IT SUPPORT and TECHNICAL SUPPORT. A confident miss in the explorer above is an example. This caps accuracy on that half of the data."],
+  ["Small test set.", `The held-out split has ${M.n_holdout} queries (${bs.tickets.n} free-text), so the gate's error estimate is ${pct(M.at_threshold.holdout.risk)} with a 95% interval of ${pct(M.at_threshold.holdout.risk_ci95[0])} to ${pct(M.at_threshold.holdout.risk_ci95[1])}. The 4,000-query calibration run gives a tighter ${pct(M.at_threshold.calibration.risk)}.`],
+  ["The main label is a proxy.", "Correct means the neighbour-vote category matches the gold category. The answer-quality section adds intent accuracy and similarity to the human resolution, but no person graded the wording. A blank grading sheet is in the repo, not yet filled."],
+  ["Labels overlap.", "Most free-text errors are between near-synonym categories such as IT SUPPORT and TECHNICAL SUPPORT, which caps accuracy on that half of the data."],
+  ["Noisy input hurts.", "Typos raise the error on answered queries and training on noise did not fix it."],
+  ["Not deployed.", "This demo is static, with precomputed answers for the featured examples. A Dockerfile and compose file are included but untested here, and there is no public live endpoint, because the stack needs a local LLM."],
   ["Small local model.", "The generator is a 3B model chosen to run on an 8 GB laptop for free. It follows the cite-or-escalate instruction less reliably than a larger model would."],
 ].map(([h, t]) => `<li><b>${h}</b> ${t}</li>`).join("");
 
 $("#foot").textContent = `Index ${M.index_size.toLocaleString()} tickets · calibration ${M.n_calibration.toLocaleString()} leave-one-out queries · test ${M.n_holdout} held-out · embeddings ${D.models.embed} · chat ${D.models.chat}`;
 if (GITHUB_URL) $("#links").innerHTML = `<a href="${GITHUB_URL}" target="_blank" rel="noopener">Source code</a>`;
+
+
+/* ---------- baselines, stress, answers, failures, latency ---------- */
+const f3 = (x) => (x == null ? "–" : x.toFixed(3));
+if (D.baselines) {
+  const B = D.baselines.methods;
+  const names = { "gradient boosting": "Gradient boosting (deployed)", "logistic (deployed)": "Logistic regression", "logistic + isotonic": "Logistic + isotonic", "single: vote_share": "Vote share only", "single: entropy": "Vote entropy only", "single: top1": "Raw top-1 similarity" };
+  const keys = Object.keys(names).sort((a, b) => B[a].aurc_cal - B[b].aurc_cal);
+  $("#baseTbl").innerHTML = `<tr><th>Method</th><th class="n">AURC</th><th class="n">Answered at ≤10% error</th></tr>` +
+    keys.map((k) => `<tr class="${k === "gradient boosting" ? "hl" : ""}"><td>${names[k]}</td><td class="n">${f3(B[k].aurc_cal)}</td><td class="n">${pct(B[k].cov_at_10risk_cal, 0)}</td></tr>`).join("");
+  const c = D.baselines.conformal.find((x) => x.alpha === 0.1);
+  $("#baseCap").innerHTML = `4,000 leave-one-out queries, lower AURC is better. Gradient boosting wins on ranking and calibration (ECE ${B["gradient boosting"].ece_cal.toFixed(3)} vs ${B["logistic (deployed)"].ece_cal.toFixed(3)}), so it replaced my first logistic-regression gate. Raw similarity is worse than random here. Split conformal prediction keeps its coverage guarantee (the true category is in the set ${pct(c.set_contains_truth, 0)} of the time at α=0.1) but, abstaining unless the set is a single category, it errs on ${pct(c.risk_on_answered)} of the ${pct(c.coverage_answered, 0)} it answers, no better than a plain vote-share threshold.`;
+}
+if (D.stress) {
+  const S = D.stress;
+  $("#oodTbl").innerHTML = `<tr><th>Message set</th><th class="n">n</th><th class="n">Escalated</th><th class="n">Before guard</th></tr>` +
+    `<tr><td>Real tickets (should answer)</td><td class="n">${S.in_domain.n}</td><td class="n">${pct(S.in_domain.escalated, 0)}</td><td class="n">${pct(S.in_domain.escalated_corr_only, 0)}</td></tr>` +
+    Object.entries(S.sets).map(([k, v]) => `<tr><td>${esc(k)}</td><td class="n">${v.n}</td><td class="n"><b>${pct(v.escalated, 0)}</b></td><td class="n">${pct(v.escalated_corr_only, 0)}</td></tr>`).join("");
+  $("#oodCap").textContent = `My first gate only judged whether neighbours agree, so it let most unrelated messages through (right-hand column). Raw similarity, useless for ranking correctness, separates unrelated text almost perfectly (AUROC about 0.99+), so a relevance guard now sits in front. It costs about ${pct(D.meta.false_escalation_ood_guard_holdout || 0.01, 0)} extra escalations on real tickets. Banking77 is real customer language from a neighbouring domain, so some of it legitimately looks answerable.`;
+  const t = S.typos, tb = D.stress_before && D.stress_before.typos.noisy, ta = D.stress_aug && D.stress_aug.typos.noisy;
+  const row = (n, x) => `<tr><td>${n}</td><td class="n">${pct(x.accuracy, 0)}</td><td class="n">${pct(x.answered, 0)}</td><td class="n">${pct(x.error_on_answered)}</td></tr>`;
+  $("#typoTbl").innerHTML = `<tr><th></th><th class="n">Accuracy</th><th class="n">Answered</th><th class="n">Wrong</th></tr>` + row("Clean", { ...t.clean }) + row("Noisy (deployed)", t.noisy) + (ta ? row("Noisy, trained with typos", ta) : "");
+  $("#typoCap").textContent = `Typos cost about ${Math.round((t.clean.accuracy - t.noisy.accuracy) * 100)} points of accuracy and the gate does not compensate: error on answered queries rises from ${pct(t.clean.error_on_answered)} to ${pct(t.noisy.error_on_answered)}. I tried training the gate on noisy copies and it did not help, so I kept the simpler model. This remains an open weakness.`;
+}
+if (D.answer && D.answer.variants && D.answer.variants.grounded) {
+  const A = D.answer, g = A.variants.grounded;
+  $("#answers").hidden = false;
+  const cols = [["all", "Answer everything"], ["gate_answered", "Gate: answered"], ["gate_escalated", "Gate: escalated"]];
+  const rows = [["Intent accuracy", "intent_acc", true], ["Category accuracy", "category_acc", true], ["Similarity to human resolution", "resolution_sim", false], ["Baseline: copy the top retrieved resolution", "retrieval_only_sim", false], ["Answers with invented numbers or timeframes", "unsupported_specifics_rate", true], ["Cites a source", "cites_a_source", true]];
+  $("#ansTbl").innerHTML = `<tr><th>Metric</th>${cols.map((c) => `<th class="n">${c[1]}</th>`).join("")}</tr><tr><td>Queries</td>${cols.map(([k]) => `<td class="n">${g[k].n}</td>`).join("")}</tr>` +
+    rows.map(([l, k, p]) => `<tr><td>${l}</td>${cols.map(([c]) => `<td class="n">${g[c].n ? (p ? pct(g[c][k]) : f3(g[c][k])) : "–"}</td>`).join("")}</tr>`).join("");
+  const llm = g.all.resolution_sim, ret = g.all.retrieval_only_sim;
+  $("#ansCap").textContent = `Escalated queries are visibly harder, with lower intent accuracy than the answered ones. One uncomfortable result: simply returning the top retrieved ticket's resolution is closer to the human answer (${f3(ret)}) than the LLM's rewrite (${f3(llm)}). The LLM writes a short action in its own words, which this similarity metric penalises, but on this data the generation step does not obviously beat plain retrieval, so its value is the structure and brevity rather than accuracy.`;
+  const c = A.same_queries_grounded_vs_naive;
+  if (c) {
+    $("#cmpPanel").hidden = false;
+    const cr = [["Intent accuracy", "intent_acc", true], ["Invented numbers or timeframes", "unsupported_specifics_rate", true], ["Stays inside sources", "support_sim", false]];
+    $("#cmpTbl").innerHTML = `<tr><th>Metric</th><th class="n">Naive</th><th class="n">Grounded</th><th class="n">+ gate</th></tr>` + cr.map(([l, k, p]) => `<tr><td>${l}</td>${["naive", "grounded", "grounded_gated_answered"].map((v) => `<td class="n">${c[v].n ? (p ? pct(c[v][k]) : f3(c[v][k])) : "–"}</td>`).join("")}</tr>`).join("");
+    $("#cmpCap").textContent = `Same ${c.n} queries through both prompts.`;
+  }
+  const j = A.llm_judge_sample;
+  if (j) {
+    $("#judgePanel").hidden = false;
+    $("#judgeTbl").innerHTML = `<tr><th>Group</th><th class="n">Hallucination rate</th></tr><tr><td>All answers (n=${j.n})</td><td class="n">${pct(j.hallucination_rate)}</td></tr><tr><td>Gate answered (n=${j.n_gate_answered})</td><td class="n">${pct(j.hallucination_rate_gate_answered)}</td></tr><tr><td>Gate escalated (n=${j.n_gate_escalated})</td><td class="n">${pct(j.hallucination_rate_gate_escalated)}</td></tr>`;
+    $("#judgeCap").textContent = `Faithfulness judged claim by claim by ${j.judge_model}, a larger model than the 3B generator. Small sample, so directional.`;
+  }
+}
+if (D.failure) {
+  const F = D.failure;
+  $("#failLede").textContent = `${pct(F.share_errors_within_group, 0)} of all wrong predictions are confusions among just ${F.group_categories.length} overlapping categories out of 21. That points at the taxonomy more than the retriever.`;
+  $("#confTbl").innerHTML = `<tr><th>Category pair</th><th class="n">Wrong</th></tr>` + F.top_undirected_confusions.slice(0, 6).map((x) => `<tr><td>${esc(x.pair.join(" ↔ "))}</td><td class="n">${x.n}</td></tr>`).join("");
+  $("#confCap").textContent = `Out of ${F.n_cal.toLocaleString()} leave-one-out queries. All errors are in the free-text tickets (templated messages: 0% error).`;
+  $("#mergeTbl").innerHTML = `<tr><th>Pairs merged</th><th class="n">Categories</th><th class="n">Accuracy</th><th class="n">Answered at ≤10% err</th></tr>` + F.merge_experiment.slice(0, 4).map((e) => `<tr><td>${e.merged_pairs.length}</td><td class="n">${e.n_categories}</td><td class="n">${pct(e.accuracy_answer_all_hold, 0)}</td><td class="n">${pct(e.coverage_at_10pct_error_cal, 0)}</td></tr>`).join("");
+  $("#mergeCap").textContent = "Held-out accuracy and calibration-set coverage. Merging makes the task easier by construction, so the evidence is the concentration of errors, not the gain itself. The fix I would make first is to the labels.";
+  $("#missList").innerHTML = F.confident_misses_holdout.slice(0, 3).map((m) => `<div class="gap"><div><h3>${esc(m.gold)} → ${esc(m.pred)}</h3><div class="m">confidence ${m.confidence.toFixed(2)}</div></div><blockquote>"${esc(m.query.replace(/\\n|<br\s*\/?>/g, " ").replace(/\s+/g, " ").slice(0, 200))}"</blockquote></div>`).join("");
+}
+if (D.bench) {
+  const b = D.bench; $("#bench").hidden = false;
+  $("#benchTbl").innerHTML = `<tr><th></th><th class="n">n</th><th class="n">p50</th><th class="n">p95</th></tr><tr><td>Answered (LLM called)</td><td class="n">${b.answered.n}</td><td class="n">${b.answered.p50_s}s</td><td class="n">${b.answered.p95_s}s</td></tr><tr><td>Escalated (LLM skipped)</td><td class="n">${b.escalated.n}</td><td class="n">${b.escalated.p50_s}s</td><td class="n">${b.escalated.p95_s}s</td></tr>`;
+  $("#benchCap").textContent = `Embedding ${b.stage_median_ms.embed} ms, FAISS search ${b.stage_median_ms.faiss_search} ms and the gate ${b.stage_median_ms.gate} ms at the median. On a mix of ${b.traffic.in_domain} real tickets and ${b.traffic.out_of_domain} out-of-domain messages the gate avoided ${pct(b.llm_calls_avoided, 0)} of LLM calls, cutting mean latency from ${b.mean_latency_s_if_every_query_called_llm}s to ${b.mean_latency_s_with_gate}s.`;
+}
 
 drawRC();
 showQ();

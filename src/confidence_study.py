@@ -63,6 +63,13 @@ def main() -> None:
             f.flush()
 
     df = pd.read_json(PATH, lines=True)
+    # recompute the retrieval-based score with the *current* gate, so refitting never leaves stale numbers
+    from src.reliability import batch_features, load_eval_data
+
+    ev = load_eval_data(4000, config.TOP_K)
+    _, Xh = batch_features(ev["hs"], ev["hc"])
+    cur = dict(zip(ev["test"]["ticket_id"], gate.predict_proba(Xh)))
+    df["calibrated_confidence"] = df["ticket_id"].map(cur)
     out = {"n": int(len(df)), "llm_category_accuracy": round(float(df["llm_correct"].mean()), 4),
            "knn_category_accuracy": round(float(df["knn_correct"].mean()), 4), "signals": {}}
     y = df["llm_correct"].to_numpy()
