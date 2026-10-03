@@ -1,5 +1,7 @@
 # RAG Support Insights & LLM Evaluation
 
+**[Live interactive demo](https://aayshinde.github.io/rag-support-insights/)** | measured results in [`results/`](results/) | a support-ticket triage system that escalates to a human when its evidence is weak.
+
 A retrieval-augmented pipeline that triages customer-support messages: it retrieves similar
 past tickets from a FAISS index, classifies the new issue (category + intent), and recommends a
 **next-best-action** grounded in how those past tickets were resolved. A RAGAS-style evaluation

@@ -1,0 +1,79 @@
+{
+  "tau": 0.27131212970733937,
+  "ood_top1": 0.7032808756828308,
+  "model": "gb",
+  "in_domain": {
+    "n": 200,
+    "escalated": 0.14,
+    "escalated_corr_only": 0.13
+  },
+  "sets": {
+    "out-of-scope (CLINC oos)": {
+      "n": 300,
+      "escalated": 0.9833,
+      "escalated_corr_only": 0.2767,
+      "mean_confidence": 0.6254,
+      "auroc_vs_in_domain": {
+        "gate (gradient boosting)": 0.7131,
+        "raw top-1 similarity": 0.9992,
+        "vote share": 0.6473
+      },
+      "examples_answered_anyway": [
+        "is there a fee for cancelling a flight i've booked",
+        "add my wife as an authorized user to checking account 20905432",
+        "cancel my subscription to scientific american"
+      ]
+    },
+    "unrelated domains (CLINC in-scope)": {
+      "n": 300,
+      "escalated": 0.9833,
+      "escalated_corr_only": 0.2133,
+      "mean_confidence": 0.6825,
+      "auroc_vs_in_domain": {
+        "gate (gradient boosting)": 0.6754,
+        "raw top-1 similarity": 0.9982,
+        "vote share": 0.5842
+      },
+      "examples_answered_anyway": [
+        "tell me where my order is",
+        "why was my card got declined when i am trying to pay for dinner when i am in vietnam",
+        "let me know what's on my shopping list"
+      ]
+    },
+    "adjacent domain (Banking77)": {
+      "n": 300,
+      "escalated": 0.7867,
+      "escalated_corr_only": 0.14,
+      "mean_confidence": 0.7988,
+      "auroc_vs_in_domain": {
+        "gate (gradient boosting)": 0.5546,
+        "raw top-1 similarity": 0.9847,
+        "vote share": 0.4526
+      },
+      "examples_answered_anyway": [
+        "Hi, I was trying to use my card but it was declining by ATM. I have cross checked with two different ATMs but i was facing the same issue. Could you please check my account.",
+        "Did you start charging for cash withdrawals? I thought it was free so far but noticed suddendly there is a fee. How much do I need to pay?",
+        "How do I cancel a previous purchase"
+      ]
+    }
+  },
+  "typos": {
+    "rate": 0.08,
+    "n": 200,
+    "example": [
+      "problems with my pass reset",
+      "problems wiith m pass reset"
+    ],
+    "clean": {
+      "accuracy": 0.815,
+      "answered": 0.86,
+      "error_on_answered": 0.0872
+    },
+    "noisy": {
+      "accuracy": 0.755,
+      "answered": 0.645,
+      "error_on_answered": 0.155
+    },
+    "confidence_drop_mean": 0.0586
+  }
+}

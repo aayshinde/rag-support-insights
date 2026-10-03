@@ -1,0 +1,442 @@
+{
+  "n_cal": 4000,
+  "answered_wrong_pairs": [
+    {
+      "gold": "IT SUPPORT",
+      "pred": "TECHNICAL SUPPORT",
+      "n": 24
+    },
+    {
+      "gold": "CUSTOMER SERVICE",
+      "pred": "TECHNICAL SUPPORT",
+      "n": 22
+    },
+    {
+      "gold": "TECHNICAL SUPPORT",
+      "pred": "PRODUCT SUPPORT",
+      "n": 22
+    },
+    {
+      "gold": "PRODUCT SUPPORT",
+      "pred": "TECHNICAL SUPPORT",
+      "n": 22
+    },
+    {
+      "gold": "TECHNICAL SUPPORT",
+      "pred": "CUSTOMER SERVICE",
+      "n": 22
+    },
+    {
+      "gold": "CUSTOMER SERVICE",
+      "pred": "PRODUCT SUPPORT",
+      "n": 18
+    },
+    {
+      "gold": "PRODUCT SUPPORT",
+      "pred": "CUSTOMER SERVICE",
+      "n": 15
+    },
+    {
+      "gold": "TECHNICAL SUPPORT",
+      "pred": "IT SUPPORT",
+      "n": 12
+    },
+    {
+      "gold": "IT SUPPORT",
+      "pred": "PRODUCT SUPPORT",
+      "n": 10
+    },
+    {
+      "gold": "CUSTOMER SERVICE",
+      "pred": "RETURNS AND EXCHANGES",
+      "n": 10
+    },
+    {
+      "gold": "PRODUCT SUPPORT",
+      "pred": "IT SUPPORT",
+      "n": 9
+    },
+    {
+      "gold": "RETURNS AND EXCHANGES",
+      "pred": "CUSTOMER SERVICE",
+      "n": 8
+    }
+  ],
+  "top_undirected_confusions": [
+    {
+      "pair": [
+        "PRODUCT SUPPORT",
+        "TECHNICAL SUPPORT"
+      ],
+      "n": 104
+    },
+    {
+      "pair": [
+        "IT SUPPORT",
+        "TECHNICAL SUPPORT"
+      ],
+      "n": 90
+    },
+    {
+      "pair": [
+        "CUSTOMER SERVICE",
+        "TECHNICAL SUPPORT"
+      ],
+      "n": 85
+    },
+    {
+      "pair": [
+        "CUSTOMER SERVICE",
+        "PRODUCT SUPPORT"
+      ],
+      "n": 80
+    },
+    {
+      "pair": [
+        "IT SUPPORT",
+        "PRODUCT SUPPORT"
+      ],
+      "n": 45
+    },
+    {
+      "pair": [
+        "CUSTOMER SERVICE",
+        "RETURNS AND EXCHANGES"
+      ],
+      "n": 34
+    },
+    {
+      "pair": [
+        "CUSTOMER SERVICE",
+        "IT SUPPORT"
+      ],
+      "n": 31
+    },
+    {
+      "pair": [
+        "PRODUCT SUPPORT",
+        "RETURNS AND EXCHANGES"
+      ],
+      "n": 27
+    }
+  ],
+  "wrong_share_by_source": {
+    "bitext": 0.0,
+    "tickets": 0.3899
+  },
+  "group_categories": [
+    "CUSTOMER SERVICE",
+    "IT SUPPORT",
+    "PRODUCT SUPPORT",
+    "TECHNICAL SUPPORT"
+  ],
+  "share_errors_within_group": 0.5739,
+  "per_category": [
+    {
+      "category": "SALES AND PRE-SALES",
+      "n": 57,
+      "accuracy": 0.3684,
+      "escalated": 0.3333,
+      "error_on_answered": 0.4474
+    },
+    {
+      "category": "GENERAL INQUIRY",
+      "n": 27,
+      "accuracy": 0.4074,
+      "escalated": 0.3333,
+      "error_on_answered": 0.3889
+    },
+    {
+      "category": "RETURNS AND EXCHANGES",
+      "n": 93,
+      "accuracy": 0.4086,
+      "escalated": 0.3871,
+      "error_on_answered": 0.3509
+    },
+    {
+      "category": "HUMAN RESOURCES",
+      "n": 39,
+      "accuracy": 0.4615,
+      "escalated": 0.3333,
+      "error_on_answered": 0.3077
+    },
+    {
+      "category": "IT SUPPORT",
+      "n": 229,
+      "accuracy": 0.4978,
+      "escalated": 0.3188,
+      "error_on_answered": 0.2885
+    },
+    {
+      "category": "CUSTOMER SERVICE",
+      "n": 314,
+      "accuracy": 0.5382,
+      "escalated": 0.2771,
+      "error_on_answered": 0.2775
+    },
+    {
+      "category": "PRODUCT SUPPORT",
+      "n": 332,
+      "accuracy": 0.5572,
+      "escalated": 0.2741,
+      "error_on_answered": 0.2531
+    },
+    {
+      "category": "SERVICE OUTAGES AND MAINTENANCE",
+      "n": 86,
+      "accuracy": 0.5814,
+      "escalated": 0.2907,
+      "error_on_answered": 0.1967
+    },
+    {
+      "category": "TECHNICAL SUPPORT",
+      "n": 564,
+      "accuracy": 0.7305,
+      "escalated": 0.1578,
+      "error_on_answered": 0.1432
+    },
+    {
+      "category": "BILLING AND PAYMENTS",
+      "n": 203,
+      "accuracy": 0.8276,
+      "escalated": 0.0887,
+      "error_on_answered": 0.0919
+    },
+    {
+      "category": "ACCOUNT",
+      "n": 427,
+      "accuracy": 1.0,
+      "escalated": 0.0164,
+      "error_on_answered": 0.0
+    },
+    {
+      "category": "CANCEL",
+      "n": 82,
+      "accuracy": 1.0,
+      "escalated": 0.0122,
+      "error_on_answered": 0.0
+    },
+    {
+      "category": "CONTACT",
+      "n": 167,
+      "accuracy": 1.0,
+      "escalated": 0.024,
+      "error_on_answered": 0.0
+    },
+    {
+      "category": "DELIVERY",
+      "n": 150,
+      "accuracy": 1.0,
+      "escalated": 0.0267,
+      "error_on_answered": 0.0
+    },
+    {
+      "category": "FEEDBACK",
+      "n": 161,
+      "accuracy": 1.0,
+      "escalated": 0.0124,
+      "error_on_answered": 0.0
+    },
+    {
+      "category": "INVOICE",
+      "n": 162,
+      "accuracy": 1.0,
+      "escalated": 0.0185,
+      "error_on_answered": 0.0
+    },
+    {
+      "category": "ORDER",
+      "n": 275,
+      "accuracy": 1.0,
+      "escalated": 0.0327,
+      "error_on_answered": 0.0
+    },
+    {
+      "category": "PAYMENT",
+      "n": 177,
+      "accuracy": 1.0,
+      "escalated": 0.0113,
+      "error_on_answered": 0.0
+    },
+    {
+      "category": "REFUND",
+      "n": 225,
+      "accuracy": 1.0,
+      "escalated": 0.0178,
+      "error_on_answered": 0.0
+    },
+    {
+      "category": "SHIPPING",
+      "n": 166,
+      "accuracy": 1.0,
+      "escalated": 0.012,
+      "error_on_answered": 0.0
+    },
+    {
+      "category": "SUBSCRIPTION",
+      "n": 64,
+      "accuracy": 1.0,
+      "escalated": 0.0,
+      "error_on_answered": 0.0
+    }
+  ],
+  "merge_experiment": [
+    {
+      "merged_pairs": [],
+      "n_categories": 21,
+      "accuracy_answer_all_cal": 0.8105,
+      "accuracy_answer_all_hold": 0.815,
+      "coverage_at_10pct_error_cal": 0.8825
+    },
+    {
+      "merged_pairs": [
+        [
+          "PRODUCT SUPPORT",
+          "TECHNICAL SUPPORT"
+        ]
+      ],
+      "n_categories": 20,
+      "accuracy_answer_all_cal": 0.8365,
+      "accuracy_answer_all_hold": 0.855,
+      "coverage_at_10pct_error_cal": 0.896
+    },
+    {
+      "merged_pairs": [
+        [
+          "PRODUCT SUPPORT",
+          "TECHNICAL SUPPORT"
+        ],
+        [
+          "IT SUPPORT",
+          "TECHNICAL SUPPORT"
+        ]
+      ],
+      "n_categories": 19,
+      "accuracy_answer_all_cal": 0.8702,
+      "accuracy_answer_all_hold": 0.9,
+      "coverage_at_10pct_error_cal": 0.943
+    },
+    {
+      "merged_pairs": [
+        [
+          "PRODUCT SUPPORT",
+          "TECHNICAL SUPPORT"
+        ],
+        [
+          "IT SUPPORT",
+          "TECHNICAL SUPPORT"
+        ],
+        [
+          "CUSTOMER SERVICE",
+          "TECHNICAL SUPPORT"
+        ]
+      ],
+      "n_categories": 18,
+      "accuracy_answer_all_cal": 0.9193,
+      "accuracy_answer_all_hold": 0.925,
+      "coverage_at_10pct_error_cal": 1.0
+    },
+    {
+      "merged_pairs": [
+        [
+          "PRODUCT SUPPORT",
+          "TECHNICAL SUPPORT"
+        ],
+        [
+          "IT SUPPORT",
+          "TECHNICAL SUPPORT"
+        ],
+        [
+          "CUSTOMER SERVICE",
+          "TECHNICAL SUPPORT"
+        ],
+        [
+          "CUSTOMER SERVICE",
+          "PRODUCT SUPPORT"
+        ]
+      ],
+      "n_categories": 18,
+      "accuracy_answer_all_cal": 0.9193,
+      "accuracy_answer_all_hold": 0.925,
+      "coverage_at_10pct_error_cal": 1.0
+    },
+    {
+      "merged_pairs": [
+        [
+          "PRODUCT SUPPORT",
+          "TECHNICAL SUPPORT"
+        ],
+        [
+          "IT SUPPORT",
+          "TECHNICAL SUPPORT"
+        ],
+        [
+          "CUSTOMER SERVICE",
+          "TECHNICAL SUPPORT"
+        ],
+        [
+          "CUSTOMER SERVICE",
+          "PRODUCT SUPPORT"
+        ],
+        [
+          "IT SUPPORT",
+          "PRODUCT SUPPORT"
+        ]
+      ],
+      "n_categories": 18,
+      "accuracy_answer_all_cal": 0.9193,
+      "accuracy_answer_all_hold": 0.925,
+      "coverage_at_10pct_error_cal": 1.0
+    }
+  ],
+  "confident_misses_holdout": [
+    {
+      "query": "Request for System Support\nThere has been an observed system slowdown impacting user login times. The probable cause is server overload and deployment issues. The team has restarted the servers, clear",
+      "gold": "IT SUPPORT",
+      "pred": "TECHNICAL SUPPORT",
+      "confidence": 0.962
+    },
+    {
+      "query": "Support Request for Crash Issue\nThe platform experienced a crash because of insufficient capacity.",
+      "gold": "TECHNICAL SUPPORT",
+      "pred": "CUSTOMER SERVICE",
+      "confidence": 0.917
+    },
+    {
+      "query": "Customer Support, I am reaching out to inquire about the digital marketing strategies your company employs to enhance brand growth across various tech products. I am interested in this field and belie",
+      "gold": "SALES AND PRE-SALES",
+      "pred": "RETURNS AND EXCHANGES",
+      "confidence": 0.75
+    },
+    {
+      "query": "Reported Problem with Data Analytics System\nSystem is operational",
+      "gold": "IT SUPPORT",
+      "pred": "TECHNICAL SUPPORT",
+      "confidence": 0.69
+    },
+    {
+      "query": "Secure Patient Information\nCould you furnish the necessary documentation that secures patient information?",
+      "gold": "IT SUPPORT",
+      "pred": "TECHNICAL SUPPORT",
+      "confidence": 0.663
+    },
+    {
+      "query": "Enhance Digital Marketing Tools for Brand Growth\nAdjust digital marketing instruments to ensure smooth brand advancement and effective campaign management, thereby increasing brand awareness.",
+      "gold": "SERVICE OUTAGES AND MAINTENANCE",
+      "pred": "PRODUCT SUPPORT",
+      "confidence": 0.621
+    },
+    {
+      "query": "Query Regarding Drop in Brand Engagement Metrics\nNoticed a decrease in brand engagement metrics. Recent modifications to our marketing strategies might be the reason. Having reviewed the adjusted camp",
+      "gold": "TECHNICAL SUPPORT",
+      "pred": "SALES AND PRE-SALES",
+      "confidence": 0.616
+    },
+    {
+      "query": "Device-Related Technical Problems\nCustomer Support is documenting a technical problem faced by a financial company. The issue involves connectivity failures across multiple devices and software synchr",
+      "gold": "PRODUCT SUPPORT",
+      "pred": "TECHNICAL SUPPORT",
+      "confidence": 0.58
+    }
+  ]
+}

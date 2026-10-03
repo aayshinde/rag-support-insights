@@ -1,0 +1,17 @@
+{
+  "n": 100,
+  "llm_category_accuracy": 0.83,
+  "knn_category_accuracy": 0.79,
+  "signals": {
+    "llm_verbalised_confidence": {
+      "auroc": 0.5528,
+      "aurc": 0.1834,
+      "distinct_values": 2
+    },
+    "retrieval_calibrated_confidence": {
+      "auroc": 0.876,
+      "aurc": 0.0384,
+      "distinct_values": 97
+    }
+  }
+}

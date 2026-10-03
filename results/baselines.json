@@ -1,0 +1,149 @@
+{
+  "n_cal": 4000,
+  "n_hold": 200,
+  "methods": {
+    "single: top1": {
+      "aurc_cal": 0.2546,
+      "aurc_hold": 0.2594,
+      "risk_at_80cov_cal": 0.2212,
+      "risk_at_80cov_hold": 0.2063,
+      "cov_at_10risk_cal": 0.0165,
+      "cov_at_10risk_hold": 0.005
+    },
+    "single: mean_topk": {
+      "aurc_cal": 0.2593,
+      "aurc_hold": 0.2329,
+      "risk_at_80cov_cal": 0.2147,
+      "risk_at_80cov_hold": 0.1875,
+      "cov_at_10risk_cal": 0.0077,
+      "cov_at_10risk_hold": 0.01
+    },
+    "single: gap12": {
+      "aurc_cal": 0.26,
+      "aurc_hold": 0.2888,
+      "risk_at_80cov_cal": 0.1975,
+      "risk_at_80cov_hold": 0.1875,
+      "cov_at_10risk_cal": 0.0005,
+      "cov_at_10risk_hold": 0.0
+    },
+    "single: vote_share": {
+      "aurc_cal": 0.0408,
+      "aurc_hold": 0.0355,
+      "risk_at_80cov_cal": 0.0913,
+      "risk_at_80cov_hold": 0.0813,
+      "cov_at_10risk_cal": 0.8093,
+      "cov_at_10risk_hold": 0.815
+    },
+    "single: agree_frac": {
+      "aurc_cal": 0.049,
+      "aurc_hold": 0.0451,
+      "risk_at_80cov_cal": 0.1188,
+      "risk_at_80cov_hold": 0.1125,
+      "cov_at_10risk_cal": 0.761,
+      "cov_at_10risk_hold": 0.78
+    },
+    "single: entropy": {
+      "aurc_cal": 0.0436,
+      "aurc_hold": 0.0381,
+      "risk_at_80cov_cal": 0.1,
+      "risk_at_80cov_hold": 0.0813,
+      "cov_at_10risk_cal": 0.8,
+      "cov_at_10risk_hold": 0.815
+    },
+    "logistic (deployed)": {
+      "aurc_cal": 0.0379,
+      "aurc_hold": 0.0349,
+      "risk_at_80cov_cal": 0.0916,
+      "risk_at_80cov_hold": 0.0813,
+      "cov_at_10risk_cal": 0.8255,
+      "cov_at_10risk_hold": 0.835,
+      "ece_cal": 0.0469,
+      "ece_hold": 0.0707
+    },
+    "gradient boosting": {
+      "aurc_cal": 0.0286,
+      "aurc_hold": 0.0257,
+      "risk_at_80cov_cal": 0.0453,
+      "risk_at_80cov_hold": 0.05,
+      "cov_at_10risk_cal": 0.8825,
+      "cov_at_10risk_hold": 0.905,
+      "ece_cal": 0.0119,
+      "ece_hold": 0.0464
+    },
+    "logistic + isotonic": {
+      "aurc_cal": 0.0386,
+      "aurc_hold": 0.0353,
+      "risk_at_80cov_cal": 0.0925,
+      "risk_at_80cov_hold": 0.0813,
+      "cov_at_10risk_cal": 0.818,
+      "cov_at_10risk_hold": 0.83,
+      "ece_cal": 0.0089,
+      "ece_hold": 0.0639
+    }
+  },
+  "conformal": [
+    {
+      "alpha": 0.02,
+      "coverage_answered": 0.555,
+      "risk_on_answered": 0.0,
+      "set_contains_truth": 0.945,
+      "mean_set_size": 1.805,
+      "deployed_risk_at_same_coverage": 0.0,
+      "vote_share_risk_at_same_coverage": 0.0
+    },
+    {
+      "alpha": 0.05,
+      "coverage_answered": 0.555,
+      "risk_on_answered": 0.0,
+      "set_contains_truth": 0.945,
+      "mean_set_size": 1.805,
+      "deployed_risk_at_same_coverage": 0.0,
+      "vote_share_risk_at_same_coverage": 0.0
+    },
+    {
+      "alpha": 0.08,
+      "coverage_answered": 0.705,
+      "risk_on_answered": 0.0284,
+      "set_contains_truth": 0.93,
+      "mean_set_size": 1.35,
+      "deployed_risk_at_same_coverage": 0.0426,
+      "vote_share_risk_at_same_coverage": 0.0355
+    },
+    {
+      "alpha": 0.1,
+      "coverage_answered": 0.76,
+      "risk_on_answered": 0.0658,
+      "set_contains_truth": 0.92,
+      "mean_set_size": 1.275,
+      "deployed_risk_at_same_coverage": 0.0592,
+      "vote_share_risk_at_same_coverage": 0.0526
+    },
+    {
+      "alpha": 0.15,
+      "coverage_answered": 0.805,
+      "risk_on_answered": 0.118,
+      "set_contains_truth": 0.85,
+      "mean_set_size": 1.19,
+      "deployed_risk_at_same_coverage": 0.087,
+      "vote_share_risk_at_same_coverage": 0.087
+    },
+    {
+      "alpha": 0.2,
+      "coverage_answered": 0.905,
+      "risk_on_answered": 0.1271,
+      "set_contains_truth": 0.795,
+      "mean_set_size": 0.915,
+      "deployed_risk_at_same_coverage": 0.1215,
+      "vote_share_risk_at_same_coverage": 0.1271
+    },
+    {
+      "alpha": 0.3,
+      "coverage_answered": 0.705,
+      "risk_on_answered": 0.0355,
+      "set_contains_truth": 0.68,
+      "mean_set_size": 0.705,
+      "deployed_risk_at_same_coverage": 0.0426,
+      "vote_share_risk_at_same_coverage": 0.0355
+    }
+  ]
+}

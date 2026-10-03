@@ -4,6 +4,14 @@ __pycache__/
 .venv/
 data/*.csv
 index/
-results/
+results/*
+!results/*.md
+!results/*.png
+!results/reliability.json
+!results/baselines.json
+!results/stress_test.json
+!results/failure_analysis.json
+!results/answer_eval.json
+!results/confidence_study.json
 .pytest_cache/
 .DS_Store

@@ -1,0 +1,262 @@
+{
+  "n_calibration": 4000,
+  "n_holdout": 200,
+  "index_size": 48178,
+  "k": 5,
+  "target_risk": 0.1,
+  "tau": 0.2713,
+  "baseline_accuracy": {
+    "calibration": 0.8105,
+    "holdout": 0.815
+  },
+  "aurc": {
+    "calibrated_model": {
+      "calibration": 0.0285,
+      "holdout": 0.0257
+    },
+    "raw_top1": {
+      "calibration": 0.2546,
+      "holdout": 0.2594
+    },
+    "vote_share": {
+      "calibration": 0.0408,
+      "holdout": 0.0355
+    },
+    "random": {
+      "calibration": 0.189,
+      "holdout": 0.2055
+    }
+  },
+  "ece": {
+    "calibrated_model": 0.011,
+    "holdout": 0.0464
+  },
+  "at_threshold": {
+    "calibration": {
+      "coverage": 0.8825,
+      "risk": 0.09999999999999998,
+      "risk_ci95": [
+        0.09047208317196268,
+        0.10941198231987065
+      ]
+    },
+    "holdout": {
+      "coverage": 0.87,
+      "risk": 0.08620689655172409,
+      "risk_ci95": [
+        0.046242774566473965,
+        0.12576570995939154
+      ]
+    }
+  },
+  "by_source": {
+    "calibration": {
+      "bitext": {
+        "n": 2056,
+        "baseline_accuracy": 1.0,
+        "coverage": 1.0,
+        "error_on_answered": 0.0
+      },
+      "tickets": {
+        "n": 1944,
+        "baseline_accuracy": 0.6101,
+        "coverage": 0.7582,
+        "error_on_answered": 0.2395
+      }
+    },
+    "holdout": {
+      "bitext": {
+        "n": 102,
+        "baseline_accuracy": 1.0,
+        "coverage": 1.0,
+        "error_on_answered": 0.0
+      },
+      "tickets": {
+        "n": 98,
+        "baseline_accuracy": 0.6224,
+        "coverage": 0.7347,
+        "error_on_answered": 0.2083
+      }
+    }
+  },
+  "within_source_aurc": {
+    "bitext": {
+      "calibrated_model": 0.0,
+      "raw_top1": 0.0,
+      "vote_share": 0.0,
+      "random": 0.0
+    },
+    "tickets": {
+      "calibrated_model": 0.1418,
+      "raw_top1": 0.2869,
+      "vote_share": 0.2103,
+      "random": 0.3839
+    }
+  },
+  "model": "gb",
+  "augment_typos": 0,
+  "ood_top1": 0.7033,
+  "false_escalation_ood_guard_holdout": 0.01,
+  "importance": {
+    "top1": 0.0454,
+    "mean_topk": 0.0162,
+    "gap12": 0.0127,
+    "vote_share": 0.2971,
+    "agree_frac": 0.2798,
+    "entropy": 0.8072
+  },
+  "knowledge_gaps": [
+    {
+      "size": 109,
+      "share_of_abstained": 0.22,
+      "keywords": [
+        "issue",
+        "problem",
+        "project",
+        "issues",
+        "server"
+      ],
+      "mean_confidence": 0.095,
+      "top_gold_category": "TECHNICAL SUPPORT",
+      "category_purity": 0.294,
+      "examples": [
+        "Customer Support, <br>Encountering connectivity problems on multiple devices related to the software. This could be due to conflicting software updates or hardware compatibility issues. <br>",
+        "Server Problem Impacting Several Products Detected\nCustomer Support, I am reporting an incident involving multiple affected products, including Microsoft Office, PostgreSQL, Git, and Oracle Database. The issue appears to be caused by a serv",
+        "Support Service Issue\nA ticket has been created to address a support concern, flagged as medium priority, related to system outages impacting several essential tools such as Adobe Sign, Google Meet, and Oracle Database 19c. These outages ar"
+      ]
+    },
+    {
+      "size": 74,
+      "share_of_abstained": 0.149,
+      "keywords": [
+        "integration",
+        "project",
+        "project management",
+        "saas",
+        "management"
+      ],
+      "mean_confidence": 0.108,
+      "top_gold_category": "CUSTOMER SERVICE",
+      "category_purity": 0.216,
+      "examples": [
+        "Support for Project Management SaaS Solutions\nIs it possible to get more information on the integration capabilities of your project management SaaS products?",
+        "Support Request for Smartsheet Integration\nHello customer support, I am reaching out to inquire about integrating the Smartsheet SaaS project management platform. Could you provide me with the details and necessary steps required for the in",
+        "Request for Scalability Features Integration Options\nCustomer Support team, I am reaching out to inquire about the available options for integrating scalability features within the SaaS platform. Our team is currently assessing various solu"
+      ]
+    },
+    {
+      "size": 67,
+      "share_of_abstained": 0.135,
+      "keywords": [
+        "security",
+        "data",
+        "medical",
+        "breach",
+        "access"
+      ],
+      "mean_confidence": 0.118,
+      "top_gold_category": "TECHNICAL SUPPORT",
+      "category_purity": 0.224,
+      "examples": [
+        "Customer Support, reporting a serious incident that compromised the security of medical data on hospital systems. There was unauthorized access, which may have been due to a security vulnerability caused by employee negligence. Despite our ",
+        "Customer Support, concerning a serious incident that compromised the security of medical data on hospital systems, there has been unauthorized access, suggesting a potential security vulnerability likely due to employee negligence. Although",
+        "Assistance with Detected Security Issue\nAn unauthorized access attempt has been identified in our hospital systems, which could impact the security of medical data due to outdated software and inadequate network protocols. Initial security "
+      ]
+    },
+    {
+      "size": 61,
+      "share_of_abstained": 0.123,
+      "keywords": [
+        "investment",
+        "data",
+        "analytics",
+        "issue",
+        "software"
+      ],
+      "mean_confidence": 0.119,
+      "top_gold_category": "TECHNICAL SUPPORT",
+      "category_purity": 0.23,
+      "examples": [
+        "Dear Customer Support, <br><br>I am currently preparing a report on the issue with the data analytics system. The system recently experienced a failure that impacted investment optimization. The root cause is likely a software glitch or dat",
+        "Problem with Investment Data Analysis Tools\nAn issue has arisen with the investment data analysis tools. Recent software updates and configuration changes might be the cause. We have restarted the affected systems and checked for updates.",
+        "Detected Inconsistencies in Analytics Data Today\nCustomer Support,<br><br>We are encountering problems with the investment optimization tool, resulting in inconsistent analytics results. The issue might be related to integration problems wi"
+      ]
+    },
+    {
+      "size": 53,
+      "share_of_abstained": 0.107,
+      "keywords": [
+        "analytics",
+        "investment",
+        "data analytics",
+        "tools",
+        "data"
+      ],
+      "mean_confidence": 0.155,
+      "top_gold_category": "PRODUCT SUPPORT",
+      "category_purity": 0.321,
+      "examples": [
+        "Inquiry About Available Data Analytics Tools for Investment Optimization\nI reached out to Customer Support to inquire about the data analytics tools that can help optimize investment strategies. Could you provide details on the types of too",
+        "Improving Data Analytics Capabilities for Investment Optimization\nCustomer support has received a request to enhance data analytics tools used for investment decision-making. The current tools are limited in their ability to deliver real-ti",
+        "Information on Data Analytics Tools for Investment Optimization\nDear Customer Support Team, I am contacting you to learn more about how data analytics can enhance investment decision-making with your products. Could you provide detailed inf"
+      ]
+    },
+    {
+      "size": 52,
+      "share_of_abstained": 0.105,
+      "keywords": [
+        "medical",
+        "medical data",
+        "security",
+        "data",
+        "hospital"
+      ],
+      "mean_confidence": 0.125,
+      "top_gold_category": "CUSTOMER SERVICE",
+      "category_purity": 0.269,
+      "examples": [
+        "Security Solutions for Medical Data\nCustomer Support, we are seeking details on the security solutions offered to safeguard medical data in hospital systems. Could you please provide information on the measures in place to protect sensitive",
+        "Ensuring Security of Medical Data on Hospital IT Systems\nHello Customer Support, I am writing to request information on the security measures that should be taken to protect medical data on our hospital's IT systems and devices. Given that ",
+        "Enhancing Security of Medical Data in Healthcare Solutions\nI am reaching out to Customer Support regarding the security measures implemented for medical data within healthcare solutions. Could you provide detailed information on how you pro"
+      ]
+    },
+    {
+      "size": 47,
+      "share_of_abstained": 0.095,
+      "keywords": [
+        "digital",
+        "brand",
+        "strategies",
+        "digital strategies",
+        "marketing"
+      ],
+      "mean_confidence": 0.149,
+      "top_gold_category": "CUSTOMER SERVICE",
+      "category_purity": 0.255,
+      "examples": [
+        "Customer Support Inquiry on Digital Strategies\nCustomer Support, we are inquiring about digital strategies for brand growth. Could you provide us with information on methods and techniques that can be used to increase brand awareness and en",
+        "Growth Through Digital Strategies\nCustomer Support, seeking detailed information on the digital strategies and services offered for brand growth in association with your products. Could you provide a comprehensive overview of the services y",
+        "Assistance with Digital Strategies for Brand Growth\nLooking for detailed information on digital strategies that can benefit my business's growth. I would greatly appreciate understanding the specific tactics and techniques that can be emplo"
+      ]
+    },
+    {
+      "size": 33,
+      "share_of_abstained": 0.067,
+      "keywords": [
+        "campaign",
+        "digital",
+        "marketing",
+        "engagement",
+        "campaigns"
+      ],
+      "mean_confidence": 0.132,
+      "top_gold_category": "RETURNS AND EXCHANGES",
+      "category_purity": 0.182,
+      "examples": [
+        "Support Required for Digital Campaign\nOur digital marketing campaign has underperformed this month. Changes to the algorithm might have affected visibility. We adjusted the ad spend and refreshed the ad creatives, which showed some improvem",
+        "Problem with Campaign Efficiency\nThe digital marketing campaigns managed by the agency are not performing well on various platforms. This might be due to recent software updates or integration problems. We have analyzed the campaign data, a",
+        "Decline in Engagement for Digital Marketing Campaign\nCustomer Support,\\n\\nOur digital marketing initiative has recently seen a sharp decrease in user engagement. The probable causes include modifications to platform algorithms or technical "
+      ]
+    }
+  ]
+}
